@@ -1,5 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
+use crate::AddEventListenerOptionsOrBoolean;
+
 use super::{Event, EventType};
 
 pub struct EventListenerObject;
@@ -18,12 +20,9 @@ pub enum EventListenerOrEventListenerObject {
 pub type EventTarget = dyn IntoEventTarget;
 pub type EventTargetRef = Rc<RefCell<EventTarget>>;
 
-pub enum AddEventListenerOptionsOrBoolean {
-    EventListenerOptions { capture: Option<bool> },
-    Bool(bool),
-}
-
-pub trait IntoEventTarget: event_target_internal::AsEventTarget {
+pub trait IntoEventTarget: internal::IntoEventTargetInner {
+    fn as_event_target(&self) -> &EventTarget;
+    fn as_event_target_mut(&mut self) -> &mut EventTarget;
     /// Appends an event listener for events whose type attribute value is type. The callback argument sets the callback that will be invoked when the event is dispatched.
     ///
     /// The options argument sets listener-specific options. For compatibility this can be a boolean, in which case the method behaves exactly as if the value was specified as options's capture.
@@ -43,7 +42,7 @@ pub trait IntoEventTarget: event_target_internal::AsEventTarget {
         callback: Option<EventListenerOrEventListenerObject>,
         options: Option<AddEventListenerOptionsOrBoolean>,
     ) {
-        let target = self.__as_event_target_mut();
+        let target = self.z_as_event_target_inner_mut();
 
         match target.listeners.get_mut(&type_) {
             Some(listeners) => {
@@ -69,7 +68,8 @@ pub trait IntoEventTarget: event_target_internal::AsEventTarget {
     }
 }
 
-pub(crate) mod event_target_internal {
+#[doc(hidden)]
+pub(crate) mod internal {
     use std::collections::HashMap;
 
     use crate::EventType;
@@ -86,10 +86,10 @@ pub(crate) mod event_target_internal {
         >,
     }
 
-    pub trait AsEventTarget {
+    pub trait IntoEventTargetInner {
         /// Convert to a reference to event.
-        fn __as_event_target(&self) -> &EventTargetInner;
+        fn z_as_event_target_inner(&self) -> &EventTargetInner;
         /// Convert to a mutable reference to event.
-        fn __as_event_target_mut(&mut self) -> &mut EventTargetInner;
+        fn z_as_event_target_inner_mut(&mut self) -> &mut EventTargetInner;
     }
 }

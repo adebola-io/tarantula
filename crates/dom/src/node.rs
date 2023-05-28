@@ -1,27 +1,40 @@
-use std::{any::Any, cell::RefCell, ops::Index, rc::Rc, slice::Iter};
+use std::{
+    any::Any,
+    cell::RefCell,
+    ops::Index,
+    rc::{Rc, Weak},
+};
+
+use crate::{Attr, DocumentType};
 
 use super::{DocumentRef, Element, HTMLElementRef, HtmlCollection, IntoEventTarget};
 
-// /// node is an element.
-// const ELEMENT_NODE: u8 = 1;
-// const ATTRIBUTE_NODE: u8 = 2;
-// /// node is a Text node.
-// const TEXT_NODE: u8 = 3;
-// /// node is a CDATASection node.
-// const CDATA_SECTION_NODE: u8 = 4;
-// const ENTITY_REFERENCE_NODE: u8 = 5;
-// const ENTITY_NODE: u8 = 6;
-// /// node is a ProcessingInstruction node.
-// const PROCESSING_INSTRUCTION_NODE: u8 = 7;
-// /// node is a Comment node.
-// const COMMENT_NODE: u8 = 8;
-// /// node is a document.
-// const DOCUMENT_NODE: u8 = 9;
-// /// node is a doctype.
-// const DOCUMENT_TYPE_NODE: u8 = 10;
-// /// node is a DocumentFragment node.
-// const DOCUMENT_FRAGMENT_NODE: u8 = 11;
-// const NOTATION_NODE: u8 = 12;
+pub struct CastError;
+
+#[derive(Debug, PartialEq)]
+pub enum NodeType {
+    /// node is an element.
+    Element = 1,
+    Attribute = 2,
+    /// node is a Text node.
+    Text = 3,
+    /// node is a CDATASection node.
+    CDATASection = 4,
+    EntityReference = 5,
+    Entity = 6,
+    /// node is a ProcessingInstruction node.
+    ProcessingInstruction = 7,
+    /// node is a Comment node.
+    Comment = 8,
+    /// node is a document.
+    Document = 9,
+    /// node is a doctype.
+    DocumentType = 10,
+    /// node is a DocumentFragment node.
+    DocumentFragment = 11,
+    Notation = 12,
+}
+
 // /// Set when node and other are not in the same tree.
 // const DOCUMENT_POSITION_DISCONNECTED: u8 = 0x01;
 // /// Set when other is preceding node.
@@ -37,111 +50,174 @@ use super::{DocumentRef, Element, HTMLElementRef, HtmlCollection, IntoEventTarge
 pub struct GetRootNodeOptions;
 
 pub type ChildNode = dyn IntoChildNode;
-pub type ChildNodeRef = Rc<RefCell<ChildNode>>;
+pub type ChildNodeRef = Weak<RefCell<ChildNode>>;
 pub type ParentNode = dyn IntoParentNode;
-pub type ParentNodeRef = Rc<RefCell<ParentNode>>;
+pub type ParentNodeRef = Weak<RefCell<ParentNode>>;
 /// Node is an interface from which a number of DOM API object types inherit. It allows those types to be treated similarly; for example, inheriting the same set of methods, or being tested in the same way.
 pub type Node = dyn IntoNode;
 pub type NodeRef = Rc<RefCell<Node>>;
 
 pub trait IntoNode: IntoEventTarget + internal::AsNodeInner {
+    fn as_node(&self) -> &Node;
+    fn as_node_mut(&mut self) -> &mut Node;
     /// Returns node's node document's document base URL.
     fn base_uri(&self) -> &str {
-        self.__as_node().base_uri.as_str()
+        todo!()
     }
     /// Returns the children.
     fn child_nodes(&self) -> &NodeListOf<ChildNode> {
-        &self.__as_node().nodelist
+        &self.as_node_inner().nodelist
     }
     /// Returns the children mutably.
     fn child_nodes_mut(&mut self) -> &mut NodeListOf<ChildNode> {
-        &mut self.__as_node_mut().nodelist
+        &mut self.as_node_inner_mut().nodelist
     }
     /// Returns the first child.
-    fn first_child(&self) -> Option<&ChildNodeRef> {
-        self.__as_node().first_child.as_ref()
+    fn first_child(&self) -> Option<&ChildNode> {
+        unsafe {
+            match self.as_node_inner().nodelist.items.get(0) {
+                Some(node) => Some(&*(node.as_ptr())),
+                None => None,
+            }
+        }
     }
-    /// Returns the first child mutably.
-    fn first_child_mut(&mut self) -> Option<&mut ChildNodeRef> {
-        self.__as_node_mut().first_child.as_mut()
+    /// Returns a mutable reference to the first child.
+    fn first_child_mut(&mut self) -> Option<&mut ChildNode> {
+        unsafe {
+            match self.as_node_inner_mut().nodelist.items.get_mut(0) {
+                Some(node) => Some(&mut *(node.as_ptr())),
+                None => None,
+            }
+        }
     }
     /// Returns true if node is connected and false otherwise.
     fn is_connected(&self) -> bool {
-        self.__as_node().is_connected
+        self.as_node_inner().is_connected
     }
     /// Returns the last child.
-    fn last_child(&self) -> Option<&ChildNodeRef> {
-        self.__as_node().last_child.as_ref()
+    fn last_child(&self) -> Option<&ChildNode> {
+        unsafe {
+            match self.as_node_inner().nodelist.items.last() {
+                Some(node) => Some(&*(node.as_ptr())),
+                None => None,
+            }
+        }
     }
     /// Returns the last child mutably.
-    fn last_child_mut(&mut self) -> Option<&mut ChildNodeRef> {
-        self.__as_node_mut().last_child.as_mut()
+    fn last_child_mut(&mut self) -> Option<&mut ChildNode> {
+        unsafe {
+            match self.as_node_inner_mut().nodelist.items.last_mut() {
+                Some(node) => Some(&mut *(node.as_ptr())),
+                None => None,
+            }
+        }
     }
     /// Returns the next sibling.
-    fn next_sibling(&self) -> Option<&ChildNodeRef> {
-        self.__as_node().next_sibling.as_ref()
+    fn next_sibling(&self) -> Option<&ChildNode> {
+        todo!()
     }
     /// Returns the next sibling mutably.
-    fn next_sibling_mut(&mut self) -> Option<&mut ChildNodeRef> {
-        self.__as_node_mut().next_sibling.as_mut()
+    fn next_sibling_mut(&mut self) -> Option<&mut ChildNode> {
+        todo!()
     }
+    /// Try to represent node as an Element.
+    fn to_element(&self) -> Option<&Element> {
+        None
+    }
+    /// Try to represent node as an Attr.
+    fn to_attr(&self) -> Option<&Attr> {
+        None
+    }
+    fn to_document_type(&self) -> Option<&DocumentType> {
+        None
+    }
+
     /// Returns a string appropriate for the type of node.
     fn node_name(&self) -> &str {
-        &self.__as_node().node_name
+        match self.node_type() {
+            NodeType::Element => self.to_element().unwrap().z_as_element().tag.as_str(),
+            NodeType::Attribute => self.to_attr().unwrap().name.as_str(),
+            NodeType::Text => "#text",
+            NodeType::CDATASection => "#cdata-section",
+            NodeType::Comment => "#comment",
+            NodeType::Document => "#document",
+            NodeType::DocumentFragment => "#document-fragment",
+            NodeType::DocumentType => self.to_document_type().unwrap().name.as_str(),
+            NodeType::ProcessingInstruction => todo!(),
+            _ => unimplemented!(),
+        }
     }
     /// Returns the type of node.
-    fn node_type(&self) -> &u8 {
-        &self.__as_node().node_type
+    fn node_type(&self) -> &NodeType {
+        &self.as_node_inner().node_type
     }
     fn node_value(&self) -> Option<&str> {
-        self.__as_node().node_value.as_ref().map(|x| x.as_str())
+        match self.node_type() {
+            NodeType::Element => None,
+            NodeType::Attribute => todo!(),
+            NodeType::Text => todo!(),
+            NodeType::CDATASection => todo!(),
+            NodeType::EntityReference => todo!(),
+            NodeType::Entity => todo!(),
+            NodeType::ProcessingInstruction => todo!(),
+            NodeType::Comment => todo!(),
+            NodeType::Document => None,
+            NodeType::DocumentType => None,
+            NodeType::DocumentFragment => todo!(),
+            NodeType::Notation => todo!(),
+        }
     }
     fn set_node_value(&mut self, value: &str) {
-        self.__as_node_mut().node_value = Some(value.to_string());
+        if !self.node_value().is_none() {
+            todo!()
+        }
     }
     /// Returns the node document. Returns None for documents.
     fn owner_document(&self) -> Option<&DocumentRef> {
-        self.__as_node().owner_document.as_ref()
+        self.as_node_inner().owner_document.as_ref()
     }
     /// Returns the node document mutably. Returns None for documents.
     fn owner_document_mut(&mut self) -> Option<&mut DocumentRef> {
-        self.__as_node_mut().owner_document.as_mut()
+        self.as_node_inner_mut().owner_document.as_mut()
     }
     /// Returns the parent element.
     fn parent_element(&self) -> Option<&HTMLElementRef> {
-        self.__as_node().parent_element.as_ref()
+        self.as_node_inner().parent_element.as_ref()
     }
     /// Returns the parent element mutably.
     fn parent_element_mut(&mut self) -> Option<&mut HTMLElementRef> {
-        self.__as_node_mut().parent_element.as_mut()
+        self.as_node_inner_mut().parent_element.as_mut()
     }
     /// Returns the parent.
     fn parent_node(&self) -> Option<&ParentNodeRef> {
-        self.__as_node().parent_node.as_ref()
+        self.as_node_inner().parent_node.as_ref()
     }
     /// Returns the parent mutably.
     fn parent_node_mut(&mut self) -> Option<&mut ParentNodeRef> {
-        self.__as_node_mut().parent_node.as_mut()
+        self.as_node_inner_mut().parent_node.as_mut()
     }
     /// Returns the previous sibling.
-    fn previous_sibling(&self) -> Option<&ChildNodeRef> {
-        self.__as_node().previous_sibling.as_ref()
+    fn previous_sibling(&self) -> Option<&ChildNode> {
+        todo!()
     }
     /// Returns the previous sibling mutably.
-    fn previous_sibling_mut(&mut self) -> Option<&mut ChildNodeRef> {
-        self.__as_node_mut().previous_sibling.as_mut()
+    fn previous_sibling_mut(&mut self) -> Option<&mut ChildNode> {
+        todo!()
     }
     fn text_content(&self) -> Option<&str> {
-        self.__as_node().text_content.as_ref().map(|x| x.as_str())
+        self.as_node_inner()
+            .text_content
+            .as_ref()
+            .map(|x| x.as_str())
     }
     fn set_text_content(&mut self, value: &str) {
-        self.__as_node_mut().text_content = Some(value.to_string())
+        self.as_node_inner_mut().text_content = Some(value.to_string())
     }
-    fn append_child(&mut self, node: Rc<RefCell<dyn IntoNode>>) -> &dyn IntoNode {
+    fn append_child(&mut self, node: Rc<RefCell<Node>>) -> &Node {
         todo!()
     }
     /// Returns a copy of node. If deep is true, the copy also includes the node's descendants.
-    fn clone_node(&self, deep: bool) -> Rc<RefCell<dyn IntoNode>> {
+    fn clone_node(&self, deep: bool) -> Rc<RefCell<Node>> {
         todo!()
     }
     /// Returns a bitmask indicating the position of other relative to node.
@@ -149,7 +225,7 @@ pub trait IntoNode: IntoEventTarget + internal::AsNodeInner {
         todo!()
     }
     /// Returns true if other is an inclusive descendant of node, and false otherwise.
-    fn contains(&self, other: Option<Rc<RefCell<dyn IntoNode>>>) -> bool {
+    fn contains(&self, other: Option<&Node>) -> bool {
         todo!()
     }
     /// Returns node's root.
@@ -158,7 +234,7 @@ pub trait IntoNode: IntoEventTarget + internal::AsNodeInner {
     }
     /// Returns whether node has children.
     fn has_child_nodes(&self) -> bool {
-        self.child_nodes().len() > 0
+        self.last_child().is_some()
     }
     fn insert_before(&mut self, node: Rc<RefCell<Node>>, child: Option<&Node>) -> &Node {
         todo!()
@@ -167,7 +243,7 @@ pub trait IntoNode: IntoEventTarget + internal::AsNodeInner {
         todo!()
     }
     /// Returns whether node and otherNode have the same properties.
-    fn is_equal_node(&self, other_node: Option<&dyn IntoNode>) -> bool {
+    fn is_equal_node(&self, other_node: Option<&Node>) -> bool {
         todo!()
     }
     fn is_same_node(&self, other_node: Option<&Node>) -> bool {
@@ -183,19 +259,17 @@ pub trait IntoNode: IntoEventTarget + internal::AsNodeInner {
     fn normalize(&mut self) {
         todo!()
     }
-    fn remove_child(&mut self, node: &Rc<RefCell<dyn IntoNode>>) -> &dyn IntoNode {
+    fn remove_child(&mut self, node: &Rc<RefCell<Node>>) -> &Node {
         todo!()
     }
-    fn replace_child(
-        &mut self,
-        node: &Rc<RefCell<dyn IntoNode>>,
-        child: &Rc<RefCell<dyn IntoNode>>,
-    ) -> &dyn IntoNode {
+    fn replace_child(&mut self, node: &Rc<RefCell<Node>>, child: &Rc<RefCell<Node>>) -> &Node {
         todo!()
     }
 }
 
-pub trait IntoParentNode: IntoNode + internal::AsParentNodeInner {
+pub trait IntoParentNode: IntoNode {
+    fn as_parent_node(&self) -> &ParentNode;
+    fn as_parent_node_mut(&mut self) -> &mut ParentNode;
     fn child_element_count(&self) -> usize {
         todo!()
     }
@@ -213,14 +287,14 @@ pub trait IntoParentNode: IntoNode + internal::AsParentNodeInner {
     /// Inserts nodes after the last child of node, while replacing strings in nodes with equivalent Text nodes.
     /// # Panics
     /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
-    fn append(&mut self, node: Rc<RefCell<Node>>) {
-        todo!()
+    fn append(&mut self, node: Rc<RefCell<ChildNode>>) {
+        self.child_nodes_mut().items.push(node);
     }
     /// Inserts nodes before the first child of node, while replacing strings in nodes with equivalent Text nodes.
     /// # Panics
     /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
-    fn prepend(&mut self, node: Rc<RefCell<Node>>) {
-        todo!()
+    fn prepend(&mut self, node: Rc<RefCell<ChildNode>>) {
+        self.child_nodes_mut().items.insert(0, node);
     }
     /// Traverse tree and find the first element that matches a selector, if it exists.
     fn query_selector(&self, selector: &str) -> Option<&Rc<RefCell<Element>>> {
@@ -241,7 +315,7 @@ pub trait IntoParentNode: IntoNode + internal::AsParentNodeInner {
     }
 }
 
-pub trait IntoChildNode: IntoNode + internal::AsChildNodeInner {
+pub trait IntoChildNode: IntoNode {
     /// Inserts nodes just after node, while replacing strings in nodes with equivalent Text nodes.
     /// # Panics
     /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
@@ -256,7 +330,20 @@ pub trait IntoChildNode: IntoNode + internal::AsChildNodeInner {
     }
     /// Removes node.
     fn remove(&mut self) {
-        todo!()
+        // Disconnect from parent.
+        if let Some(parentref) = self.parent_node_mut() {
+            match parentref.upgrade() {
+                Some(parent) => parent
+                    .borrow_mut()
+                    .as_node_inner_mut()
+                    .nodelist
+                    .items
+                    .retain(|node| node.borrow().as_node_inner() != self.as_node_inner()),
+                None => {}
+            }
+        }
+
+        self.as_node_inner_mut().parent_node = None;
     }
     /// Replaces node with nodes, while replacing strings in nodes with equivalent Text nodes.
     /// # Panics
@@ -280,38 +367,48 @@ pub trait NodeList: Index<usize> {
 }
 
 pub struct NodeListOf<TNode: IntoNode + ?Sized> {
-    items: Vec<Rc<RefCell<TNode>>>,
+    pub(crate) items: Vec<Rc<RefCell<TNode>>>,
 }
 
 impl<TNode> NodeListOf<TNode>
 where
     TNode: IntoNode,
 {
-    pub fn iter(&self) -> Iter<Rc<RefCell<TNode>>> {
-        self.items.as_slice().iter()
+    /// Returns an iterator over the slice.
+    pub fn iter(&self) -> impl Iterator<Item = &TNode> {
+        unsafe { self.items.as_slice().iter().map(|x| &*x.as_ptr()) }
     }
-}
-
-impl NodeListOf<ChildNode> {
-    fn len(&self) -> usize {
+    /// Returns an iterator that allows modifying each value.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut TNode> {
+        unsafe {
+            self.items
+                .as_mut_slice()
+                .iter_mut()
+                .map(|x| &mut *x.as_ptr())
+        }
+    }
+    /// Returns the length of the list.
+    pub fn len(&self) -> usize {
         self.items.len()
     }
     /// Returns the node with index index from the collection. The nodes are sorted in tree order.
-    fn item(&self, index: usize) -> Option<&ChildNodeRef> {
-        self.items.get(index)
+    pub fn item(&self, index: usize) -> Option<&TNode> {
+        unsafe { self.items.get(index).map(|x| &*x.as_ptr()) }
     }
-    fn item_mut(&mut self, index: usize) -> Option<&mut ChildNodeRef> {
-        self.items.get_mut(index)
+    pub fn item_mut(&mut self, index: usize) -> Option<&mut TNode> {
+        unsafe { self.items.get_mut(index).map(|x| &mut *x.as_ptr()) }
     }
     /// Performs the specified action for each node in an list.<br><br>
     /// _@param_ `callbackfn`  A function that accepts up to three arguments. forEach calls the callbackfn function one time for each element in the list.<br><br>
     /// _@param_ `thisArg`  An object to which the this keyword can refer in the callbackfn function. If thisArg is omitted, undefined is used as the this value.
-    fn for_each(
+    pub fn for_each(
         &self,
-        callbackfn: fn(NodeRef, usize, &Self) -> (),
-        this_arg: Option<Box<dyn Any>>,
+        callbackfn: fn(&TNode, usize, &Self) -> (),
+        // this_arg: Option<Box<dyn Any>>,
     ) {
-        todo!()
+        self.iter().enumerate().for_each(|item| {
+            callbackfn(item.1, item.0, self);
+        })
     }
 }
 
@@ -323,41 +420,75 @@ impl Index<usize> for NodeListOf<ChildNode> {
     }
 }
 
+#[doc(hidden)]
 pub(crate) mod internal {
-    use crate::{DocumentRef, HTMLElementRef};
+    use crate::{DocumentRef, HTMLElementRef, NodeType};
 
-    use super::{ChildNode, ChildNodeRef, NodeListOf, ParentNode, ParentNodeRef};
+    use super::{ChildNode, NodeListOf, ParentNodeRef};
 
     pub struct NodeInner {
-        pub __nodes: Vec<ChildNodeRef>,
         pub nodelist: NodeListOf<ChildNode>,
-        pub base_uri: String,
-        pub first_child: Option<ChildNodeRef>,
         pub is_connected: bool,
-        pub last_child: Option<ChildNodeRef>,
-        pub next_sibling: Option<ChildNodeRef>,
-        pub node_name: String,
-        pub node_type: u8,
-        pub node_value: Option<String>,
+        pub node_type: NodeType,
         pub owner_document: Option<DocumentRef>,
         pub parent_element: Option<HTMLElementRef>,
         pub parent_node: Option<ParentNodeRef>,
-        pub previous_sibling: Option<ChildNodeRef>,
         pub text_content: Option<String>,
     }
 
+    impl NodeInner {
+        pub fn get_next_sibling(&self) -> &mut ChildNode {
+            todo!()
+        }
+    }
+
+    impl PartialEq for NodeInner {
+        fn eq(&self, other: &Self) -> bool {
+            std::ptr::addr_of!(self) == std::ptr::addr_of!(other)
+        }
+    }
+
     pub trait AsNodeInner {
-        fn __as_node(&self) -> &NodeInner;
-        fn __as_node_mut(&mut self) -> &mut NodeInner;
+        fn as_node_inner(&self) -> &NodeInner;
+        fn as_node_inner_mut(&mut self) -> &mut NodeInner;
     }
+}
 
-    pub trait AsChildNodeInner {
-        fn __as_child_node(&self) -> &ChildNode;
-        fn __as_child_node_mut(&mut self) -> &mut ChildNode;
+fn get_mut_node_at<'a>(
+    parent: Option<&'a ParentNodeRef>,
+    index: usize,
+) -> Option<&'a mut ChildNode> {
+    match parent {
+        Some(parent) => match parent.upgrade() {
+            Some(p) => unsafe {
+                let parent = &*(p.as_ptr());
+                parent
+                    .as_node_inner()
+                    .nodelist
+                    .items
+                    .get(index)
+                    .map(|siblingref| &mut *(siblingref.as_ptr()))
+            },
+            None => None,
+        },
+        None => None,
     }
+}
 
-    pub trait AsParentNodeInner {
-        fn __as_parent_node(&self) -> &ParentNode;
-        fn __as_parent_node_mut(&mut self) -> &mut ParentNode;
+fn get_node_at<'a>(parent: Option<&'a ParentNodeRef>, index: usize) -> Option<&'a ChildNode> {
+    match parent {
+        Some(parent) => match parent.upgrade() {
+            Some(p) => unsafe {
+                let parent = &*(p.as_ptr());
+                parent
+                    .as_node_inner()
+                    .nodelist
+                    .items
+                    .get(index)
+                    .map(|siblingref| &*(siblingref.as_ptr()))
+            },
+            None => None,
+        },
+        None => None,
     }
 }
