@@ -2,6 +2,7 @@ mod document;
 // mod dom_token_list;
 mod element;
 mod event;
+mod event_target;
 mod html_collection;
 mod html_element;
 // mod html_node;
@@ -13,8 +14,9 @@ mod node;
 
 pub use document::DocumentRef;
 // pub use dom_token_list::DOMTokenList;
-pub use element::Element;
+pub use element::*;
 pub use event::*;
+pub use event_target::*;
 pub use html_collection::HtmlCollection;
 pub use html_element::HTMLElementRef;
 pub use node::*;

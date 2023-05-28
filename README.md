@@ -1,3 +1,3 @@
 # Tarantula
 
-Web scraper written in Rust.
+DOM implementation written in Rust.
