@@ -1,3 +1,4 @@
+// #![allow(unused)]
 mod document;
 // mod dom_token_list;
 mod document_type;
@@ -15,7 +16,7 @@ mod node;
 // mod query;
 // mod tag;
 
-pub use document::DocumentRef;
+pub use document::*;
 // pub use dom_token_list::DOMTokenList;
 pub use document_type::*;
 pub use element::*;
@@ -32,7 +33,6 @@ pub use tag::*;
 // pub use query::Query;
 // pub use tag::HtmlTag;
 
-fn test() {
-    let col = HtmlCollection { items: vec![] };
-    col[0].contains(Some(col[2].as_node()));
-}
+// fn test() {
+//     let col = HtmlCollection { items: vec![] };
+// }

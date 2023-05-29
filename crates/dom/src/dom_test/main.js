@@ -1,19 +1,18 @@
 let div = document.createElement("div");
 let ul = document.createElement("ul");
+let div2 = document.createElement("div");
 
 div.append(ul);
+ul.before(div2);
 
 div.addEventListener("click", (event) => {
-  console.log("hello, world");
-});
-
-ul.addEventListener("click", () => {
-    event?.target
-  console.log("Apple Pie!!!!");
+   console.log("hello, world");
 });
 
 ul.onclick = () => {
-  console.log("Je suis");
+   console.log("Je suis");
 };
 
-ul.click();
+const ul_clone = ul.cloneNode();
+
+console.log(ul_clone.previousSibling, ul.previousSibling);

@@ -1,6 +1,6 @@
 use super::EventTargetRef;
 
-#[derive(Eq, Hash, PartialEq)]
+#[derive(Eq, Hash, PartialEq, Debug, Clone)]
 pub enum EventType {
     Click,
     MouseOver,

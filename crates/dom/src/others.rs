@@ -1,9 +1,11 @@
 pub type EventListenerOptions = dyn IntoEventListenerOptions;
+
 pub trait IntoEventListenerOptions {
     fn capture(&self) -> Option<bool>;
     fn set_capture(&mut self, value: Option<bool>);
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct AddEventListenerOptions {
     pub once: Option<bool>,
     pub passive: Option<bool>,
@@ -18,9 +20,11 @@ impl IntoEventListenerOptions for AddEventListenerOptions {
         self.capture = value
     }
 }
+#[derive(Debug, Clone, PartialEq)]
 pub enum AddEventListenerOptionsOrBoolean {
     EventListenerOptions(AddEventListenerOptions),
     Bool(bool),
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct AbortSignal;
