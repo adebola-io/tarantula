@@ -2,6 +2,7 @@
 mod document;
 // mod dom_token_list;
 mod document_type;
+mod domexception;
 mod element;
 mod event;
 mod event_target;
@@ -17,6 +18,7 @@ mod node;
 // mod tag;
 
 pub use document::*;
+pub use domexception::*;
 // pub use dom_token_list::DOMTokenList;
 pub use document_type::*;
 pub use element::*;

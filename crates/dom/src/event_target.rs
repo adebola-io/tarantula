@@ -41,9 +41,11 @@ impl EventTarget {
 }
 
 impl IntoEventTarget for EventTarget {
+    #[inline(always)]
     fn cast(&self) -> &EventTarget {
         self
     }
+    #[inline(always)]
     fn cast_mut(&mut self) -> &mut EventTarget {
         self
     }
