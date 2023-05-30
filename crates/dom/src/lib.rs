@@ -23,6 +23,7 @@ pub use element::*;
 pub use event::*;
 pub use event_target::*;
 pub use html_collection::*;
+pub use html_collection::*;
 pub use html_element::HTMLElementRef;
 pub use node::*;
 pub use others::*;

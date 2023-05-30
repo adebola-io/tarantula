@@ -1,4 +1,7 @@
-use std::{cell::RefCell, rc::Weak};
+use std::{
+    cell::RefCell,
+    rc::{Rc, Weak},
+};
 
 use crate::Node;
 
@@ -9,8 +12,19 @@ pub struct Document {
 }
 
 #[derive(Debug, Clone)]
+pub struct DocumentRef {
+    pub(crate) inner: Rc<RefCell<Document>>,
+}
+
+impl PartialEq for DocumentRef {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.inner, &other.inner)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct WeakDocumentRef {
-    inner: Weak<RefCell<Document>>,
+    pub(crate) inner: Weak<RefCell<Document>>,
 }
 
 impl PartialEq for WeakDocumentRef {

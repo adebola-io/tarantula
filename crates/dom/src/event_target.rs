@@ -69,11 +69,12 @@ pub trait IntoEventTarget: Sized {
     /// The event listener is appended to target's event listener list and is not appended if it has the same type, callback, and capture.
     fn add_event_listener(
         &mut self,
-        type_: EventType,
+        type_: impl Into<EventType>,
         callback: Option<EventListenerOrEventListenerObject>,
         options: Option<AddEventListenerOptionsOrBoolean>,
     ) {
         let target = self.cast_mut();
+        let type_ = type_.into();
 
         match target.listeners.get_mut(&type_) {
             Some(listeners) => {
@@ -91,7 +92,7 @@ pub trait IntoEventTarget: Sized {
     /// Removes the event listener in target's event listener list with the same type, callback, and options.
     fn remove_event_listener(
         &mut self,
-        type_: EventType,
+        type_: impl Into<EventType>,
         callback: Option<EventListenerOrEventListenerObject>,
         options: Option<AddEventListenerOptionsOrBoolean>,
     ) {

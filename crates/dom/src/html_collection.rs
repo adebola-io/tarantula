@@ -5,9 +5,12 @@
 // // /// A generic collection (array-like object similar to arguments) of elements (in document order) and offers methods and properties for selecting from the list.
 // // pub trait HtmlCollectionBase {}
 
-// pub struct HtmlCollection {
-//     pub(crate) items: Vec<ElementRef>,
-// }
+pub struct HTMLCollection<'a> {
+    pub(crate) items: &'a Vec<()>,
+}
+pub struct MutHTMLCollection<'a> {
+    pub(crate) items: &'a mut Vec<()>,
+}
 // impl HtmlCollection {
 //     /// Retrieves the number of objects in a collection.
 //     pub fn len(&self) -> usize {
