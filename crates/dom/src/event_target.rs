@@ -40,7 +40,7 @@ impl EventTarget {
     }
 }
 
-impl IntoEventTarget for EventTarget {
+impl AsEventTarget for EventTarget {
     #[inline(always)]
     fn cast(&self) -> &EventTarget {
         self
@@ -51,7 +51,7 @@ impl IntoEventTarget for EventTarget {
     }
 }
 
-pub trait IntoEventTarget: Sized {
+pub trait AsEventTarget: Sized {
     /// Convert to a reference to event target.
     fn cast(&self) -> &EventTarget;
     /// Convert to a mutable reference to event target.

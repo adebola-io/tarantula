@@ -2,9 +2,9 @@
 
 // use crate::{Event, HtmlCollectionOf, Tag};
 
-// use super::{ChildNode, IntoNode, IntoParentNode};
+// use super::{ChildNode, AsNode, AsParentNode};
 
-// pub type Element = dyn IntoElement;
+// pub type Element = dyn AsElement;
 // pub type ElementRef = Rc<RefCell<Element>>;
 
 // pub struct NamedNodeMap;
@@ -31,7 +31,7 @@
 // pub struct DOMRect;
 // pub struct DOMRectList;
 
-// pub trait IntoElement: IntoNode + ChildNode + IntoParentNode + internal::IntoElementInner {
+// pub trait AsElement: AsNode + ChildNode + AsParentNode + internal::AsElementInner {
 //     fn as_element(&self) -> &Element;
 //     fn as_element_mut(&mut self) -> &mut Element;
 //     fn attributes(&self) -> &NamedNodeMap {
@@ -94,10 +94,10 @@
 //         todo!()
 //     }
 //     fn owner_document(&self) -> Option<&crate::Document> {
-//         IntoNode::owner_document(self)
+//         AsNode::owner_document(self)
 //     }
 //     fn owner_document_mut(&mut self) -> Option<&mut crate::Document> {
-//         IntoNode::owner_document_mut(self)
+//         AsNode::owner_document_mut(self)
 //     }
 //     fn part(&self) -> &DOMTokenList {
 //         &self.z_as_element().part
@@ -247,7 +247,7 @@
 //         pub tag: Tag,
 //     }
 
-//     pub trait IntoElementInner {
+//     pub trait AsElementInner {
 //         fn z_as_element(&self) -> &ElementInner;
 //         fn z_as_element_mut(&mut self) -> &mut ElementInner;
 //     }

@@ -1,16 +1,15 @@
-use super::{HTMLElementRef, IntoEventTarget};
 use crate::{
-    DOMException, DocumentRef, EventTarget, HTMLCollection, MutHTMLCollection, WeakDocumentRef,
+    AsEventTarget, DOMException, DocumentRef, EventTarget, HTMLCollection, HTMLElementRef,
+    MutHTMLCollection, MutNodeListOf, NodeListOf, WeakDocumentRef,
 };
 use std::{
     cell::RefCell,
-    ops::{Index, IndexMut},
     rc::{Rc, Weak},
 };
 
 pub struct GetRootNodeOptions;
 
-#[derive(Clone, PartialEq)]
+#[derive(PartialEq)]
 pub(crate) struct NodeBase {
     pub node_type: u8,
     /// The inner event target.
@@ -52,10 +51,10 @@ impl PartialEq for WeakNodeRef {
         Weak::ptr_eq(&self.inner, &other.inner)
     }
 }
-impl<T: IntoNode> From<&T> for WeakNodeRef {
+impl<T: AsNode> From<&T> for WeakNodeRef {
     fn from(node: &T) -> Self {
         WeakNodeRef {
-            inner: Rc::downgrade(&IntoNode::cast(node).inner),
+            inner: Rc::downgrade(&AsNode::cast(node).inner),
         }
     }
 }
@@ -63,21 +62,12 @@ impl<T: IntoNode> From<&T> for WeakNodeRef {
 /// Node is an interface from which a number of DOM API object types inherit. It allows those types to be treated similarly; for example, inheriting the same set of methods, or being tested in the same way.
 #[derive(Debug, Clone)]
 pub struct Node {
-    pub(crate) inner: Rc<RefCell<NodeBase>>,
+    inner: Rc<RefCell<NodeBase>>,
 }
-impl PartialEq for Node {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.inner, &other.inner)
-    }
-}
-impl PartialEq<ChildNode> for Node {
-    fn eq(&self, other: &ChildNode) -> bool {
-        self == &(*other).inner
-    }
-}
-impl PartialEq<ParentNode> for Node {
-    fn eq(&self, other: &ParentNode) -> bool {
-        self == &(*other).inner
+
+impl<T: AsNode> PartialEq<T> for Node {
+    fn eq(&self, other: &T) -> bool {
+        Rc::ptr_eq(&self.inner, &AsNode::cast(other).inner)
     }
 }
 
@@ -100,12 +90,13 @@ impl Node {
             .map(|tuple| tuple.1 = index);
     }
 
-    fn is_child_of<T: IntoNode>(&self, parent: &T) -> bool {
-        IntoNode::cast(parent)
-            .child_nodes()
-            .iter()
-            .find(|node| node.is_same_node(self))
-            .is_some()
+    fn is_child_of(&self, parent: &impl AsNode) -> bool {
+        for child in parent.child_nodes() {
+            if child.is_same_node(self) {
+                return true;
+            }
+        }
+        false
     }
 
     fn set_parent(&mut self, parent: Option<(WeakNodeRef, usize)>) {
@@ -121,7 +112,7 @@ impl Node {
     }
 }
 
-impl IntoNode for Node {
+impl AsNode for Node {
     #[inline(always)]
     fn cast(&self) -> &Node {
         self
@@ -132,7 +123,7 @@ impl IntoNode for Node {
     }
 }
 
-impl IntoEventTarget for Node {
+impl AsEventTarget for Node {
     #[inline(always)]
     fn cast(&self) -> &EventTarget {
         unsafe { &(*self.inner.as_ptr()).event_target }
@@ -143,69 +134,127 @@ impl IntoEventTarget for Node {
     }
 }
 
-pub trait IntoNode: IntoEventTarget {
-    /// Convert to a reference to Node.
+pub trait AsNode: AsEventTarget {
+    #[doc(hidden)]
+    /// Convert to a reference to [`Node`].
     fn cast(&self) -> &Node;
-    /// Convert to a mutable reference to Node.
+    #[doc(hidden)]
+    /// Convert to a mutable reference to [`Node`].
     fn cast_mut(&mut self) -> &mut Node;
-    /// Returns node's node document's document base URL.
+    /// Returns a string slice representing the base URL of the document containing this node.
+    ///
+    /// MDN Reference: [`Node.baseURI`](https://developer.mozilla.org/en-US/docs/Web/API/Node/baseURI)
     fn base_uri(&self) -> &str {
         todo!()
     }
-    /// Returns the children.
+    /// Returns a live [`NodeList`] containing all the children of this node (including elements, text and comments).
+    /// NodeList being live means that if the children of the Node change, the NodeList object is automatically updated.
+    ///
+    /// MDN Reference: [`Node.childNodes`](https://developer.mozilla.org/en-US/docs/Web/API/Node/childNodes)
+    ///
+    /// [`NodeList`]: crate::NodeList
     fn child_nodes(&self) -> NodeListOf<'_, ChildNode> {
         NodeListOf {
-            items: unsafe { &(*IntoNode::cast(self).inner.as_ptr()).children },
+            items: unsafe { &(*AsNode::cast(self).inner.as_ptr()).children },
         }
     }
-    /// Returns the children mutably.
+    /// Returns a [`MutNodeList`] containing all the children of this node (including elements, text and comments).
+    /// NodeList being live means that if the children of the Node change, the NodeList object is automatically updated.
+    ///
+    /// MDN Reference: [`Node.childNodes`](https://developer.mozilla.org/en-US/docs/Web/API/Node/childNodes)
+    ///
+    /// [`MutNodeList`]: crate::MutNodeList
     fn child_nodes_mut(&mut self) -> MutNodeListOf<'_, ChildNode> {
         MutNodeListOf {
-            items: unsafe { &mut (*IntoNode::cast(self).inner.as_ptr()).children },
+            items: unsafe { &mut (*AsNode::cast(self).inner.as_ptr()).children },
         }
     }
-    /// Returns the first child.
+    /// Returns a reference to a [`ChildNode`] representing the first direct child node of the node, or None if the node has no child.
+    ///
+    /// MDN Reference: [`Node.firstChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/firstChild)
     fn first_child(&self) -> Option<&ChildNode> {
         self.child_nodes().items.get(0)
     }
-    /// Returns a mutable reference to the first child.
+    /// Returns a mutable reference to a [`ChildNode`] representing the first direct child node of the node, or None if the node has no child.
+    ///
+    /// MDN Reference: [`Node.firstChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/firstChild)
     fn first_child_mut(&mut self) -> Option<&mut ChildNode> {
         self.child_nodes_mut().items.get_mut(0)
     }
-    /// Returns true if node is connected and false otherwise.
+    /// Returns a boolean indicating whether or not the Node is connected (directly or indirectly) to the context object, e.g. the [`Document`] object in the case of the normal DOM, or the ShadowRoot in the case of a shadow DOM.
+    ///
+    /// MDN Reference: [`Node.isConnected`](https://developer.mozilla.org/en-US/docs/Web/API/Node/isConnected)
     fn is_connected(&self) -> bool {
         todo!()
     }
-    /// Returns the last child.
+    /// Returns a reference to a [`ChildNode`] representing the last direct child node of the node, or None if the node has no child.
+    ///
+    /// MDN Reference: [`Node.lastChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/lasthild)
     fn last_child(&self) -> Option<&ChildNode> {
         self.child_nodes().items.last()
     }
-    /// Returns the last child mutably.
+    /// Returns a mutable reference to a [`ChildNode`] representing the last direct child node of the node, or None if the node has no child.
+    ///
+    /// MDN Reference: [`Node.lastChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/lasthild)
     fn last_child_mut(&mut self) -> Option<&mut ChildNode> {
         self.child_nodes_mut().items.last_mut()
     }
-    /// Returns the next sibling.
+    /// Returns a reference to a [`ChildNode`] representing the next node in the tree, or None if there isn't such node.
+    ///
+    /// MDN Reference: [`Node.nextSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nextSibling)
     fn next_sibling(&self) -> Option<&ChildNode> {
-        match &IntoNode::cast(self).inner.borrow().parent {
+        match &AsNode::cast(self).inner.borrow().parent {
             Some(tuple) => helpers::get_node_at_index(&tuple.0, tuple.1 + 1),
             _ => None,
         }
     }
-    /// Returns the next sibling mutably.
+    /// Returns a mutable reference to a [`ChildNode`] representing the next node in the tree, or None if there isn't such node.
+    ///
+    /// MDN Reference: [`Node.nextSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nextSibling)
     fn next_sibling_mut(&mut self) -> Option<&mut ChildNode> {
-        match &IntoNode::cast(self).inner.borrow().parent {
+        match &AsNode::cast(self).inner.borrow().parent {
             Some(tuple) => helpers::get_mut_node_at_index(&tuple.0, tuple.1 + 1),
             _ => None,
         }
     }
-    /// Returns a string appropriate for the type of node.
+    /// Returns a string slice containing the name of the Node.
+    ///
+    /// The structure of the name will differ with the node type. E.g. An [`HTMLElement`] will contain the name of the corresponding tag, like 'audio' for an [`HTMLAudioElement`], a [`Text`] node will have the '#text' string, or a [`Document`] node will have the '#document' string.
+    ///
+    /// MDN Reference: [`Node.nodeName`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeName)
     fn node_name(&self) -> &str {
-        todo!()
+        let node_type = self.node_type();
+        if node_type == Self::DOCUMENT_NODE {
+            "#document"
+        } else if node_type == Self::TEXT_NODE {
+            "#text"
+        } else if node_type == Self::ELEMENT_NODE {
+            todo!()
+        } else {
+            todo!()
+        }
     }
-    /// Returns the type of node.
+    /// Returns an `u8` representing the type of the node. Possible values are:
+    ///
+    /// | Name | Value |
+    /// |------|-----|
+    /// | ELEMENT_NODE | 1 |
+    /// | ATTRIBUTE_NODE | 2 |
+    /// | TEXT_NODE | 3 |
+    /// | CDATA_SECTION_NODE | 4 |
+    /// | PROCESSING_INSTRUCTION_NODE | 7 |
+    /// | COMMENT_NODE | 8 |
+    /// | DOCUMENT_NODE | 9 |
+    /// | DOCUMENT_TYPE_NODE | 10 |
+    /// | DOCUMENT_FRAGMENT_NODE | 11 |
+    ///
+    /// MDN Reference: [`Node.nodeType`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType).
     fn node_type(&self) -> u8 {
-        IntoNode::cast(self).inner.borrow_mut().node_type
+        AsNode::cast(self).inner.borrow_mut().node_type
     }
+    /// Returns / Sets the value of the current node.
+    ///
+    /// MDN Reference: [Node.nodeValue]{https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeValue)
     fn node_value(&self) -> Option<&str> {
         todo!()
     }
@@ -219,7 +268,7 @@ pub trait IntoNode: IntoEventTarget {
         if self.node_type() == Self::DOCUMENT_NODE {
             return None;
         }
-        if let Some(weak_document_ref) = &IntoNode::cast(self).inner.borrow().owner_document {
+        if let Some(weak_document_ref) = &AsNode::cast(self).inner.borrow().owner_document {
             weak_document_ref
                 .inner
                 .upgrade()
@@ -238,7 +287,7 @@ pub trait IntoNode: IntoEventTarget {
     }
     /// Returns the parent.
     fn parent_node(&self) -> Option<ParentNode> {
-        match &IntoNode::cast(self).inner.borrow().parent {
+        match &AsNode::cast(self).inner.borrow().parent {
             Some(tuple) => tuple.0.inner.upgrade().map(|inner| ParentNode {
                 inner: Node { inner },
             }),
@@ -247,7 +296,7 @@ pub trait IntoNode: IntoEventTarget {
     }
     /// Returns the previous sibling.
     fn previous_sibling(&self) -> Option<&ChildNode> {
-        if let Some(tuple) = &IntoNode::cast(self).inner.borrow().parent {
+        if let Some(tuple) = &AsNode::cast(self).inner.borrow().parent {
             if tuple.1 == 0 {
                 None
             } else {
@@ -259,7 +308,7 @@ pub trait IntoNode: IntoEventTarget {
     }
     /// Returns the previous sibling mutably.
     fn previous_sibling_mut(&mut self) -> Option<&mut ChildNode> {
-        match &IntoNode::cast(self).inner.borrow().parent {
+        match &AsNode::cast(self).inner.borrow().parent {
             Some(tuple) => {
                 let is_first_node = tuple.1 == 0;
                 if is_first_node {
@@ -283,7 +332,7 @@ pub trait IntoNode: IntoEventTarget {
     /// - Returns a [`HierarchyRequestError`] DOMException if the constraints of the node tree are violated.
     /// # Example
     /// ```rust
-    /// use dom::{Node, IntoNode};
+    /// use dom::{Node, AsNode};
     ///
     /// let mut node = Node::new();
     /// let mut child = Node::new();
@@ -292,13 +341,14 @@ pub trait IntoNode: IntoEventTarget {
     /// assert_eq!(node.first_child().unwrap(), &child)
     ///
     /// ```
-    fn append_child<'a, T: IntoNode>(&mut self, child: &'a mut T) -> Result<&'a T, DOMException> {
+    fn append_child<'a, T: AsNode>(&mut self, child: &'a mut T) -> Result<&'a T, DOMException> {
         helpers::validate_hierarchy(self, child)?;
 
         if child.node_type() == Self::DOCUMENT_FRAGMENT_NODE {
             for subchild in child.child_nodes_mut() {
                 self.append_child(subchild)?;
             }
+            child.child_nodes_mut().items.clear();
         } else {
             let mut childnode = ChildNode::from(&*child);
             // Disconnect from former parent.
@@ -315,13 +365,13 @@ pub trait IntoNode: IntoEventTarget {
     /// Event listeners are not cloned.
     /// # Example
     /// ```
-    /// use dom::{Node, IntoNode};
+    /// use dom::{Node, AsNode};
     ///
     /// let mut node = Node::new();
     /// assert!(!node.is_same_node(&node.clone_node(false)));
     /// ```
     fn clone_node(&self, deep: bool) -> Node {
-        let noderef = helpers::clone_node(IntoNode::cast(self), deep);
+        let noderef = helpers::clone_node(AsNode::cast(self), deep);
         noderef.inner.borrow_mut().parent = None;
         noderef
     }
@@ -332,7 +382,7 @@ pub trait IntoNode: IntoEventTarget {
     /// Returns true if other is an inclusive descendant of node, and false otherwise.
     /// # Example
     /// ```
-    /// use dom::{Node, IntoNode};
+    /// use dom::{Node, AsNode};
     ///
     /// let mut node1 = Node::new();
     /// let mut node2 = Node::new();
@@ -341,14 +391,11 @@ pub trait IntoNode: IntoEventTarget {
     /// assert!(node1.contains(&node2));
     /// assert!(node1.contains(&node1)); // Nodes can contain themselves.
     /// ```
-    fn contains<T: IntoNode>(&self, other: &T) -> bool {
+    fn contains(&self, other: &impl AsNode) -> bool {
         if self.is_same_node(other) {
             return true;
         }
         for child in self.child_nodes() {
-            if child == other {
-                return true;
-            }
             if child.contains(other) {
                 return true;
             }
@@ -360,8 +407,11 @@ pub trait IntoNode: IntoEventTarget {
         todo!()
     }
     /// Returns boolean value indicating whether node has children.
+    ///
+    /// MDN Reference: [`Node.hasChildNodes()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/hasChildNodes)
+    /// # Example
     /// ```
-    /// use dom::{Node, IntoNode};
+    /// use dom::{Node, AsNode};
     ///
     /// let mut node = Node::new();
     /// assert!(!node.has_child_nodes());
@@ -372,55 +422,222 @@ pub trait IntoNode: IntoEventTarget {
     fn has_child_nodes(&self) -> bool {
         self.child_nodes().len() > 0
     }
-    fn insert_before<'a, T: IntoNode, U: IntoNode>(
+    /// Inserts a Node before the reference node as a child of a specified parent node.
+    ///
+    /// MDN Reference: [`Node.insertBefore()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/insertBefore)
+    /// # Errors
+    /// - Returns a [`HierarchyRequestError`] DOMException if the constraints of the node tree are violated.
+    /// # Example
+    /// ```
+    /// use dom::{Node, AsNode};
+    ///
+    /// let mut parent = Node::new();
+    /// let mut reference_child = Node::new();
+    /// parent.append_child(&mut reference_child).unwrap();
+    ///
+    /// let mut new_node = Node::new();
+    /// parent.insert_before(&mut new_node, Some(&mut reference_child)).unwrap();
+    ///
+    /// assert_eq!(parent.first_child().unwrap(), &new_node);
+    /// assert_eq!(parent.last_child().unwrap(), &reference_child);
+    /// assert_eq!(new_node.next_sibling().unwrap(), &reference_child);
+    /// assert_eq!(reference_child.previous_sibling().unwrap(), &new_node);
+    /// ```
+    fn insert_before<'a, T: AsNode>(
         &mut self,
-        node: &'a mut T,
-        child: Option<&mut U>,
+        new_child: &'a mut T,
+        reference_node: Option<&mut impl AsNode>,
     ) -> Result<&'a T, DOMException> {
-        todo!()
+        let mut index = match reference_node {
+            Some(reference_node) => {
+                if AsNode::cast(reference_node).is_child_of(self) {
+                    AsNode::cast(reference_node).index().unwrap()
+                } else {
+                    return Err(DOMException::HierarchyRequestError(
+                        "Reference node is not a child of this node",
+                    ));
+                }
+            }
+            None => 0,
+        };
+        helpers::validate_hierarchy(self, new_child)?;
+        if new_child.node_type() == Self::DOCUMENT_FRAGMENT_NODE {
+            let children = new_child.child_nodes_mut();
+            while !children.items.is_empty() {
+                let reference_node = unsafe { &mut *(AsNode::cast(self).inner.as_ptr()) }
+                    .children
+                    .get_mut(index);
+                self.insert_before(&mut children.items.remove(0), reference_node)?;
+                index += 1;
+            }
+            return Ok(new_child);
+        }
+
+        let mut child = ChildNode::from(&*new_child);
+        // Disconnect from former parent.
+        child.remove();
+
+        AsNode::cast_mut(&mut child).set_parent(Some((WeakNodeRef::from(&*self), index)));
+        let children = self.child_nodes_mut().items;
+        children.insert(index, child);
+
+        // Shift all following indexes.
+        loop {
+            index += 1;
+            AsNode::cast_mut(&mut children[index]).set_index(index);
+            if index + 1 == children.len() {
+                break;
+            }
+        }
+
+        Ok(new_child)
     }
+    /// Accepts a namespace URI as an argument and returns a boolean value with a value of true if the namespace is the default namespace on the given node or false if not.
+    ///
+    /// MDN Reference: [`Node.isDefaultNamespace()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/isDefaultNamespace)
     fn is_default_namespace(&self, namespace: Option<&str>) -> bool {
         todo!()
     }
-    /// Returns whether node and otherNode have the same properties.
-    fn is_equal_node<T: IntoNode>(&self, other_node: &T) -> bool {
-        let inner_node = IntoNode::cast(self).inner.borrow();
-        let other_inner_node = IntoNode::cast(other_node).inner.borrow();
+    /// Returns a boolean value which indicates whether or not two nodes are of the same type and all their defining data points match.
+    ///
+    /// MDN Reference: [`Node.isEqualNode()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/isEqualNode)
+    /// # Example
+    /// ```
+    /// use dom::{Node, AsNode};
+    /// let node1 = Node::new();
+    /// let node2 = Node::new();
+    ///
+    /// assert!(node1.is_equal_node(&node2));
+    /// ```
+    fn is_equal_node(&self, other_node: &impl AsNode) -> bool {
+        let inner_node = AsNode::cast(self).inner.borrow();
+        let other_inner_node = AsNode::cast(other_node).inner.borrow();
         *inner_node == *other_inner_node
     }
-    fn is_same_node<T: IntoNode>(&self, other_node: &T) -> bool {
-        IntoNode::cast(self) == IntoNode::cast(other_node)
+    /// Returns a boolean value indicating whether or not the two nodes are the same (that is, they reference the same object).
+    ///
+    /// MDN Reference: [`Node.isSameNode()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/isSameNode)
+    /// # Example
+    /// ```
+    /// use dom::{AsNode, Node};
+    ///
+    /// let mut parent = Node::new();
+    /// let mut child = Node::new();
+    /// parent.append_child(&mut child);
+    ///
+    /// assert!(parent.first_child().unwrap().is_same_node(&child));
+    /// ```
+    fn is_same_node(&self, other_node: &impl AsNode) -> bool {
+        AsNode::cast(self) == AsNode::cast(other_node)
     }
+    /// Accepts a prefix and returns the namespace URI associated with it on the given node if found (and None if not). Supplying None for the prefix will return the default namespace.
+    ///
+    /// MDN Reference: [`Node.lookupNamespaceURI()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/lookupNamespaceURI)
     fn lookup_namespace_uri(&self, prefix: Option<&str>) -> Option<&str> {
         todo!()
     }
+    /// Returns a string containing the prefix for a given namespace URI, if present, and None if not. When multiple prefixes are possible, the result is implementation-dependent.
+    ///
+    /// MDN Reference: [`Node.lookupPrefix()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/lookupPrefix)
     fn lookup_prefix(&self, namespace: Option<&str>) -> Option<&str> {
         todo!()
     }
-    /// Removes empty exclusive Text nodes and concatenates the data of remaining contiguous exclusive Text nodes into the first of their nodes.
+    /// Removes empty exclusive Text nodes and concatenates the data of remaining contiguous exclusive Text nodes As the first of their nodes.
     fn normalize(&mut self) {
         todo!()
     }
     /// Removes a child node and returns the removed node. It does nothing if the node to remove is not a child of this node.
-    fn remove_child<'a, T: IntoNode>(&mut self, node: &'a mut T) -> &'a mut T {
-        if let Some(parent) = node.parent_node() {
-            if parent.is_same_node(IntoNode::cast(self)) {
-                let children = self.child_nodes_mut().items;
-                let mut index = IntoNode::cast(node).index().unwrap();
-                children.remove(index);
-                // Shift indexes.
-                while index < children.len() {
-                    IntoNode::cast_mut(&mut children[index]).set_index(index - 1);
-                    index += 1;
-                }
-                // Remove parent pointer.
-                IntoNode::cast_mut(node).inner.borrow_mut().parent = None;
-            }
-        };
-        node
+    ///
+    /// MDN Reference: [`Node.removeChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/removeChild)
+    /// # Errors
+    /// Returns an error if the node to remove is not a child of this node.
+    /// # Example
+    /// ```
+    /// use dom::{AsNode, Node};
+    ///
+    /// let mut parent = Node::new();
+    /// let mut child = Node::new();
+    /// parent.append_child(&mut child).unwrap();
+    ///
+    /// assert!(parent.first_child().unwrap().is_same_node(&child));
+    ///
+    /// parent.remove_child(&mut child).unwrap();
+    ///
+    /// assert!(!parent.has_child_nodes());
+    /// assert!(child.parent_node().is_none());
+    /// ```
+    fn remove_child<'a, T: AsNode>(&mut self, node: &'a mut T) -> Result<&'a mut T, DOMException> {
+        if !AsNode::cast(node).is_child_of(self) {
+            return Err(DOMException::HierarchyRequestError(
+                "Node to remove is not a child of this node.",
+            ));
+        }
+        let children = self.child_nodes_mut().items;
+        let node_ref = AsNode::cast_mut(node);
+        let mut index = node_ref.index().unwrap();
+        children.remove(index);
+        // Shift indexes.
+        while index < children.len() {
+            AsNode::cast_mut(&mut children[index]).set_index(index - 1);
+            index += 1;
+        }
+        // Remove parent pointer.
+        node_ref.set_parent(None);
+        Ok(node)
     }
-    fn replace_child<T: IntoNode, U: IntoNode>(&mut self, node: &mut U, child: &mut T) -> &T {
-        todo!()
+    /// Replaces one child Node of the current one with the second one given in parameter.
+    ///
+    /// MDN Reference: [`Node.replaceChild()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/replaceChild)
+    /// # Errors
+    /// Returns an error if the node to replace is not a child of this node, or the addtion of the new node violates the constraints of the node tree.
+    /// # Example
+    /// ```
+    /// use dom::{AsNode, Node};
+    /// let mut parent = Node::new();
+    ///
+    /// let mut child1 = Node::new();
+    /// parent.append_child(&mut child1).unwrap();
+    ///
+    /// let mut child2 = Node::new();
+    /// parent.replace_child(&mut child2, &mut child1).unwrap();
+    ///
+    /// assert!(child1.parent_node().is_none());
+    /// assert!(child2.parent_node().unwrap().is_same_node(&parent));
+    /// ```
+    fn replace_child<'a, T: AsNode>(
+        &mut self,
+        new_child: &mut impl AsNode,
+        old_child: &'a mut T,
+    ) -> Result<&'a mut T, DOMException> {
+        let old_child_as_node = AsNode::cast_mut(old_child);
+        if !old_child_as_node.is_child_of(self) {
+            return Err(DOMException::HierarchyRequestError(
+                "Node to be replaced is not a child of this node.",
+            ));
+        }
+        helpers::validate_hierarchy(self, new_child)?;
+
+        if new_child.node_type() == Self::DOCUMENT_FRAGMENT_NODE {
+            let children = new_child.child_nodes_mut();
+            let mut i = 0;
+            while i < children.items.len() {
+                self.insert_before(&mut children.items.remove(i), Some(old_child))?;
+                i += 1;
+            }
+            self.remove_child(old_child).unwrap();
+            return Ok(old_child);
+        }
+
+        let index = old_child_as_node.index().unwrap();
+        let mut new_child = ChildNode::from(&*new_child);
+        // Disconnect from old parent.
+        new_child.remove();
+
+        AsNode::cast_mut(&mut new_child)
+            .set_parent(old_child_as_node.inner.borrow_mut().parent.take());
+        self.child_nodes_mut().items[index] = new_child;
+
+        Ok(old_child)
     }
     const ELEMENT_NODE: u8 = 1;
     const ATTRIBUTE_NODE: u8 = 2;
@@ -459,22 +676,22 @@ pub trait IntoNode: IntoEventTarget {
 pub struct ParentNode {
     inner: Node,
 }
-impl<T: IntoNode> PartialEq<T> for ParentNode {
+impl<T: AsNode> PartialEq<T> for ParentNode {
     fn eq(&self, other: &T) -> bool {
-        &self.inner == IntoNode::cast(other)
+        &self.inner == AsNode::cast(other)
     }
 }
-impl IntoEventTarget for ParentNode {
+impl AsEventTarget for ParentNode {
     #[inline(always)]
     fn cast(&self) -> &EventTarget {
-        IntoEventTarget::cast(&self.inner)
+        AsEventTarget::cast(&self.inner)
     }
     #[inline(always)]
     fn cast_mut(&mut self) -> &mut EventTarget {
-        IntoEventTarget::cast_mut(&mut self.inner)
+        AsEventTarget::cast_mut(&mut self.inner)
     }
 }
-impl IntoNode for ParentNode {
+impl AsNode for ParentNode {
     #[inline(always)]
     fn cast(&self) -> &Node {
         &self.inner
@@ -484,9 +701,9 @@ impl IntoNode for ParentNode {
         &mut self.inner
     }
 }
-impl IntoParentNode for ParentNode {}
+impl AsParentNode for ParentNode {}
 
-pub trait IntoParentNode: IntoNode {
+pub trait AsParentNode: AsNode {
     fn child_element_count(&self) -> usize {
         todo!()
     }
@@ -515,44 +732,25 @@ pub trait IntoParentNode: IntoNode {
     /// Inserts nodes after the last child of node, while replacing strings in nodes with equivalent Text nodes.
     /// # Panics
     /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
-    fn append<'a, T: 'a + IntoNode>(
+    fn append<'a, T: 'a + AsNode>(
         &mut self,
         node: impl Into<&'a mut T>,
     ) -> Result<(), DOMException> {
-        self.append_child(node.into())?;
+        let node = AsNode::cast_mut(node.into());
+        self.append_child(node)?;
         Ok(())
     }
     /// Inserts nodes before the first child of node, while replacing strings in nodes with equivalent Text nodes.
     /// # Panics
     /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
-    fn prepend<'a, T: 'a + IntoNode>(
+    fn prepend<'a, T: 'a + AsNode>(
         &mut self,
         node: impl Into<&'a mut T>,
     ) -> Result<(), DOMException> {
-        let node = IntoNode::cast_mut(node.into());
-        helpers::validate_hierarchy(self, node)?;
-        if node.node_type() == Self::DOCUMENT_FRAGMENT_NODE {
-            for child in node.child_nodes_mut().iter_mut().rev() {
-                self.prepend(child)?;
-            }
-            Ok(())
-        } else {
-            let mut self_node = IntoNode::cast(self).inner.borrow_mut();
-            let child_node = ChildNode {
-                inner: node.clone(),
-            };
-            let weak_reference = WeakNodeRef::from(&*self);
-            node.set_parent(Some((weak_reference, 0)));
-            // TODO: Shift all indexes and insert node with one pass.
-            // Shift all indexes.
-            self_node
-                .children
-                .iter_mut()
-                .enumerate()
-                .for_each(|(index, child)| child.inner.set_index(index + 1));
-            self_node.children.insert(0, child_node);
-            Ok(())
-        }
+        let node = AsNode::cast_mut(node.into());
+        let none: Option<&mut Node> = None;
+        self.insert_before(node, none)?;
+        Ok(())
     }
     /// Traverse tree and find the first element that matches a selector, if it exists.
     fn query_selector(&self, selector: &str) {
@@ -568,196 +766,110 @@ pub trait IntoParentNode: IntoNode {
     // /// Replace all children of node with nodes, while replacing strings in nodes with equivalent Text nodes.
     // /// # Panics
     // /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
-    fn replace_children<T: IntoNode>(&mut self, nodes: Vec<T>) {
+    fn replace_children(&mut self, nodes: Vec<impl AsNode>) {
         todo!()
     }
 }
 
 // CHILD NODE.
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ChildNode {
     inner: Node,
 }
-impl<T: IntoNode> PartialEq<T> for ChildNode {
+impl<T: AsNode> PartialEq<T> for ChildNode {
     fn eq(&self, other: &T) -> bool {
-        &self.inner == IntoNode::cast(other)
+        &self.inner == AsNode::cast(other)
     }
 }
-impl IntoEventTarget for ChildNode {
+impl AsEventTarget for ChildNode {
     fn cast(&self) -> &EventTarget {
-        IntoEventTarget::cast(&self.inner)
+        AsEventTarget::cast(&self.inner)
     }
 
     fn cast_mut(&mut self) -> &mut EventTarget {
-        IntoEventTarget::cast_mut(&mut self.inner)
+        AsEventTarget::cast_mut(&mut self.inner)
     }
 }
-impl<T: IntoNode> From<&T> for ChildNode {
+impl<T: AsNode> From<&T> for ChildNode {
     fn from(node: &T) -> Self {
         ChildNode {
-            inner: IntoNode::cast(node).clone(),
+            inner: AsNode::cast(node).clone(),
         }
     }
 }
-impl IntoNode for ChildNode {
+impl AsNode for ChildNode {
     fn cast(&self) -> &Node {
         &self.inner
     }
-
     fn cast_mut(&mut self) -> &mut Node {
         &mut self.inner
     }
 }
-impl IntoChildNode for ChildNode {}
+impl AsChildNode for ChildNode {}
 
-pub trait IntoChildNode: IntoNode {
+pub trait AsChildNode: AsNode {
     /// Inserts nodes just after node, while replacing strings in nodes with equivalent Text nodes.
-    /// # Panics
-    /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
-    fn after<'a, T: 'a + IntoNode>(
+    /// # Errors
+    /// - Errors with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
+    fn after<'a, T: 'a + AsNode>(
         &mut self,
         node: impl Into<&'a mut T>,
     ) -> Result<(), DOMException> {
-        let node = IntoNode::cast_mut(node.into());
-        helpers::validate_hierarchy(self, node)?;
+        let node = AsNode::cast_mut(node.into());
         if let Some(mut parent) = self.parent_node() {
-            let mut index = IntoNode::cast(self).index().unwrap() + 1;
-            node.set_parent(Some((WeakNodeRef::from(&parent), index)));
-            let child_nodes = parent.child_nodes_mut().items;
-            // Insert node.
-            child_nodes.insert(index, ChildNode::from(&*node));
-            // Shift succeding indexes.
-            loop {
-                index += 1;
-                child_nodes[index].inner.set_index(index + 1);
-                if index + 1 == child_nodes.len() {
-                    break;
-                }
-            }
+            match self.next_sibling_mut() {
+                Some(next) => parent.insert_before(node, Some(next))?,
+                None => parent.append_child(node)?,
+            };
         }
         Ok(())
     }
     /// Inserts nodes just before node, while replacing strings in nodes with equivalent Text nodes.
-    /// # Panics
-    /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
-    fn before(&mut self, node: &mut Node) -> Result<(), DOMException> {
-        if let Some(previous) = self.previous_sibling_mut() {
-            previous.after(node)
-        } else {
-            if let Some(mut parent) = self.parent_node() {
-                parent.prepend(node)
-            } else {
-                Ok(())
-            }
+    /// # Errors
+    /// - Returns a "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
+    fn before<'a, T: 'a + AsNode>(
+        &mut self,
+        node: impl Into<&'a mut T>,
+    ) -> Result<(), DOMException> {
+        let node = AsNode::cast_mut(node.into());
+        if let Some(mut parent) = self.parent_node() {
+            parent.insert_before(node, Some(self))?;
         }
+        Ok(())
     }
     /// Removes node.
     fn remove(&mut self) {
         if let Some(mut parent) = self.parent_node() {
-            parent.remove_child(self);
+            parent.remove_child(self).unwrap();
         }
     }
     /// Replaces node with nodes, while replacing strings in nodes with equivalent Text nodes.
     /// # Panics
     /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
-    fn replace_with(&mut self, node: &mut Node) {
-        if let Some(parent) = &mut node.parent_node() {
-            parent.replace_child(IntoNode::cast_mut(self), node);
+    fn replace_with<'a, T: 'a + AsNode>(
+        &mut self,
+        node: impl Into<&'a mut T>,
+    ) -> Result<(), DOMException> {
+        let node = AsNode::cast_mut(node.into());
+        if let Some(mut parent) = node.parent_node() {
+            parent.replace_child(AsNode::cast_mut(self), node)?;
         }
-    }
-}
-
-// NODE LIST.
-
-pub struct NodeListOf<'a, TNode: IntoNode> {
-    items: &'a Vec<TNode>,
-}
-
-pub struct MutNodeListOf<'a, TNode: IntoNode> {
-    items: &'a mut Vec<TNode>,
-}
-
-impl<TNode: IntoNode> Index<usize> for NodeListOf<'_, TNode> {
-    type Output = TNode;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.items[index]
-    }
-}
-impl<'a, TNode: IntoNode> IntoIterator for NodeListOf<'a, TNode> {
-    type Item = &'a TNode;
-
-    type IntoIter = std::slice::Iter<'a, TNode>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.items.into_iter()
-    }
-}
-impl<'a, TNode: IntoNode> NodeListOf<'a, TNode> {
-    /// Returns the length of the list.
-    pub fn len(&self) -> usize {
-        self.items.len()
-    }
-    /// Returns the node with index index from the collection. The nodes are sorted in tree order.
-    pub fn item(&self, index: usize) -> Option<&TNode> {
-        self.items.get(index)
-    }
-    pub fn iter(&self) -> std::slice::Iter<'_, TNode> {
-        self.items.iter()
-    }
-}
-impl<TNode: IntoNode> Index<usize> for MutNodeListOf<'_, TNode> {
-    type Output = TNode;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.items[index]
-    }
-}
-impl<TNode: IntoNode> IndexMut<usize> for MutNodeListOf<'_, TNode> {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.items[index]
-    }
-}
-impl<'a, TNode: IntoNode> MutNodeListOf<'a, TNode> {
-    /// Returns the length of the list.
-    pub fn len(&self) -> usize {
-        self.items.len()
-    }
-    /// Returns the node with index index from the collection. The nodes are sorted in tree order.
-    pub fn item(&self, index: usize) -> Option<&TNode> {
-        self.items.get(index)
-    }
-    /// Returns the node with index index from the collection. The nodes are sorted in tree order.
-    pub fn item_mut(&mut self, index: usize) -> Option<&mut TNode> {
-        self.items.get_mut(index)
-    }
-    pub fn iter(&self) -> std::slice::Iter<'_, TNode> {
-        self.items.iter()
-    }
-    pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, TNode> {
-        self.items.iter_mut()
-    }
-}
-impl<'a, TNode: IntoNode> IntoIterator for MutNodeListOf<'a, TNode> {
-    type Item = &'a mut TNode;
-
-    type IntoIter = std::slice::IterMut<'a, TNode>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.items.into_iter()
+        Ok(())
     }
 }
 
 mod helpers {
-    use crate::{ChildNode, DOMException, IntoNode, Node, NodeBase, WeakNodeRef};
+    use std::{cell::RefCell, rc::Rc};
 
-    pub fn validate_hierarchy<T: IntoNode, U: IntoNode>(
+    use crate::{AsNode, ChildNode, DOMException, Node, NodeBase, WeakNodeRef};
+
+    pub fn validate_hierarchy<T: AsNode, U: AsNode>(
         parent: &T,
         child: &U,
     ) -> Result<(), DOMException> {
         let parent_is_document = parent.node_type() == Node::DOCUMENT_NODE;
-        if !IntoNode::cast(parent).is_appendable() {
+        if !AsNode::cast(parent).is_appendable() {
             Err(DOMException::HierarchyRequestError(
                 "Self is not a Document, DocumentFragment or Element.",
             ))
@@ -774,9 +886,19 @@ mod helpers {
                 "DocumentType must always be direct descendant of Document",
             ))
         } else if child.node_type() == Node::DOCUMENT_FRAGMENT_NODE {
+            let parent_has_element_already = parent
+                .child_nodes()
+                .iter()
+                .find(|child| child.node_type() == Node::ELEMENT_NODE)
+                .is_some();
             let mut element_count = 0;
             for subchild in child.child_nodes() {
                 if subchild.node_type() == Node::ELEMENT_NODE {
+                    if parent_is_document && parent_has_element_already {
+                        return Err(DOMException::HierarchyRequestError(
+                            "Only onde document allowed at root.",
+                        ));
+                    }
                     element_count += 1;
                     if element_count > 1 && parent_is_document {
                         return Err(DOMException::HierarchyRequestError("Nodes of type '#document-fragment' may not be inserted inside nodes of type '#document'"));
@@ -811,12 +933,12 @@ mod helpers {
     }
 
     /// Create a copy of a node still attached to the parent node.
-    pub fn clone_node<T: IntoNode>(noderef: &T, deep: bool) -> Node {
-        let inner_node = IntoNode::cast(noderef).inner.borrow();
+    pub fn clone_node<T: AsNode>(noderef: &T, deep: bool) -> Node {
+        let inner_node = AsNode::cast(noderef).inner.borrow();
         if deep {
             Node {
-                inner: std::rc::Rc::new(std::cell::RefCell::new(NodeBase {
-                    node_type: inner_node.node_type.clone(),
+                inner: Rc::new(RefCell::new(NodeBase {
+                    node_type: inner_node.node_type,
                     event_target: crate::EventTarget::new(),
                     owner_document: inner_node.owner_document.clone(),
                     parent: inner_node.parent.clone(),
@@ -832,20 +954,35 @@ mod helpers {
             }
         } else {
             Node {
-                inner: std::rc::Rc::new(std::cell::RefCell::new(inner_node.clone())),
+                inner: Rc::new(RefCell::new(NodeBase {
+                    node_type: inner_node.node_type,
+                    event_target: crate::EventTarget::new(),
+                    owner_document: inner_node.owner_document.clone(),
+                    parent: inner_node.parent.clone(),
+                    children: inner_node
+                        .children
+                        .as_slice()
+                        .iter()
+                        .map(|noderef| ChildNode {
+                            inner: Node {
+                                inner: noderef.inner.inner.clone(),
+                            },
+                        })
+                        .collect(),
+                })),
             }
         }
     }
 
     /// Get the number of children a node has.
-    pub fn get_children_length<T: IntoNode>(parent: &T) -> usize {
-        IntoNode::cast(parent).inner.borrow().children.len()
+    pub fn get_children_length<T: AsNode>(parent: &T) -> usize {
+        AsNode::cast(parent).inner.borrow().children.len()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{IntoNode, Node, NodeBase};
+    use crate::{AsNode, Node, NodeBase};
 
     #[test]
     fn node_size() {
@@ -873,7 +1010,7 @@ mod tests {
 
         assert!(parent.contains(&grandchild));
 
-        parent.remove_child(&mut child);
+        parent.remove_child(&mut child).unwrap();
         assert_eq!(child.parent_node(), None);
         assert_eq!(parent.child_nodes().len(), 0);
     }

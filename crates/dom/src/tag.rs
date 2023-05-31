@@ -17,7 +17,7 @@ pub enum Tag {
     AltGlyphRef,
     /// The `<altGlyphItem>` element provides a set of candidates for glyph substitution by the `<altGlyph>` element.
     AltGlyphItem,
-    /// The applet tag in HTML was used to embed Java applets into any HTML document, discontinued starting from HTML 5.
+    /// The applet tag in HTML was used to embed Java applets As any HTML document, discontinued starting from HTML 5.
     Applet,
     /// The area element represents either a hyperlink with some text and a corresponding area on an image map, or a dead area on an image map.
     Area,
@@ -113,7 +113,7 @@ pub enum Tag {
     Footer,
     /// The form element represents a collection of form-associated elements, some of which can represent editable values that can be submitted to a server for processing.
     Form,
-    /// HTML Frames are used to divide the web browser window into multiple sections. Not supported in HTML5.
+    /// HTML Frames are used to divide the web browser window As multiple sections. Not supported in HTML5.
     Frame,
     /// The frameset element contains one or more frame elements. It is used to specify the number of rows and columns in a frameset with their pixel of spaces.
     Frameset,
@@ -288,7 +288,7 @@ pub enum Tag {
     U,
     /// The ul element represents a list of items, where the order of the items is not important — that is, where changing the order would not materially change the meaning of the document.
     Ul,
-    /// The use element takes nodes from within the SVG document, and duplicates them somewhere else. The effect is the same as if the nodes were deeply cloned into a non-exposed DOM, then pasted where the use element is, much like cloned template elements.
+    /// The use element takes nodes from within the SVG document, and duplicates them somewhere else. The effect is the same as if the nodes were deeply cloned As a non-exposed DOM, then pasted where the use element is, much like cloned template elements.
     Use,
     /// The var element represents a variable. This could be an actual variable in a mathematical expression or programming context, an identifier representing a constant, a symbol identifying a physical quantity, a function parameter, or just be a term used as a placeholder in prose.
     Var,

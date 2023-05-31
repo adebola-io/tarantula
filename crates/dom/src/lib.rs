@@ -14,6 +14,7 @@ mod tag;
 // mod named_node_map;
 // mod node;
 mod node;
+mod nodelist;
 // mod query;
 // mod tag;
 
@@ -28,6 +29,7 @@ pub use html_collection::*;
 pub use html_collection::*;
 pub use html_element::HTMLElementRef;
 pub use node::*;
+pub use nodelist::*;
 pub use others::*;
 pub use tag::*;
 // pub use html_node::*;

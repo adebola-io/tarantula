@@ -10,11 +10,11 @@ pub enum EventType {
 }
 
 /// An event which takes place in the DOM.
-pub type Event = dyn IntoEvent;
+pub type Event = dyn AsEvent;
 pub type DOMHighResTimeStamp = usize;
 
 #[allow(deprecated)]
-pub trait IntoEvent: internal::AsEventInner {
+pub trait AsEvent: internal::AsEventInner {
     /// Returns true or false depending on how event was initialized. True if event goes through its target's ancestors in reverse tree order, and false otherwise.
     fn bubbles(&self) -> bool {
         self.z_as_event().bubbles

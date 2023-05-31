@@ -1,6 +1,6 @@
 // use std::{cell::RefCell, ops::Index, rc::Rc};
 
-// use crate::{Element, ElementRef, IntoElement};
+// use crate::{Element, ElementRef, AsElement};
 
 // // /// A generic collection (array-like object similar to arguments) of elements (in document order) and offers methods and properties for selecting from the list.
 // // pub trait HtmlCollectionBase {}
@@ -45,14 +45,14 @@ pub struct MutHTMLCollection<'a> {
 
 // pub struct HtmlCollectionOf<'a, T>
 // where
-//     T: 'a + IntoElement + ?Sized,
+//     T: 'a + AsElement + ?Sized,
 // {
 //     items: Vec<&'a mut T>,
 // }
 
 // impl<'a, T> HtmlCollectionOf<'a, T>
 // where
-//     T: IntoElement + ?Sized,
+//     T: AsElement + ?Sized,
 // {
 //     /// Retrieves the number of objects in a collection.
 //     pub fn len(&self) -> usize {
@@ -70,7 +70,7 @@ pub struct MutHTMLCollection<'a> {
 // }
 // impl<'a, T> Index<usize> for HtmlCollectionOf<'a, T>
 // where
-//     T: IntoElement + ?Sized,
+//     T: AsElement + ?Sized,
 // {
 //     type Output = T;
 
