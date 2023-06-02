@@ -1,5 +1,5 @@
 use crate::{
-    AsEventTarget, DOMException, DocumentRef, EventTarget, HTMLCollection, HTMLElementRef,
+    AsEventTarget, DOMException, DocumentRef, EventTarget, HTMLCollection, HTMLElement,
     MutHTMLCollection, MutNodeListOf, NodeListOf, WeakDocumentRef,
 };
 use std::{
@@ -219,19 +219,23 @@ pub trait AsNode: AsEventTarget {
     }
     /// Returns a string slice containing the name of the Node.
     ///
-    /// The structure of the name will differ with the node type. E.g. An [`HTMLElement`] will contain the name of the corresponding tag, like 'audio' for an [`HTMLAudioElement`], a [`Text`] node will have the '#text' string, or a [`Document`] node will have the '#document' string.
+    /// The structure of the name will differ with the node type. E.g. An [`HTMLElement`] will contain the name of the corresponding tag, like `"audio"` for an [`HTMLAudioElement`], a [`Text`] node will have the `"#text"` string, or a [`Document`] node will have the `"#document"` string.
     ///
     /// MDN Reference: [`Node.nodeName`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeName)
     fn node_name(&self) -> &str {
         let node_type = self.node_type();
         if node_type == Self::DOCUMENT_NODE {
             "#document"
+        } else if node_type == Self::CDATA_SECTION_NODE {
+            "#cdata-section"
+        } else if node_type == Self::COMMENT_NODE {
+            "#comment"
+        } else if node_type == Self::DOCUMENT_FRAGMENT_NODE {
+            "#document-fragment"
         } else if node_type == Self::TEXT_NODE {
             "#text"
-        } else if node_type == Self::ELEMENT_NODE {
-            todo!()
         } else {
-            todo!()
+            unimplemented!("Node name should be implemented by Node-inherited structs.")
         }
     }
     /// Returns an `u8` representing the type of the node. Possible values are:
@@ -252,12 +256,24 @@ pub trait AsNode: AsEventTarget {
     fn node_type(&self) -> u8 {
         AsNode::cast(self).inner.borrow_mut().node_type
     }
-    /// Returns / Sets the value of the current node.
+    /// Returns the value of the current node.
     ///
     /// MDN Reference: [Node.nodeValue]{https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeValue)
     fn node_value(&self) -> Option<&str> {
-        todo!()
+        let node_type = self.node_type();
+        if node_type == Self::DOCUMENT_NODE
+            || node_type == Self::DOCUMENT_FRAGMENT_NODE
+            || node_type == Self::DOCUMENT_TYPE_NODE
+            || node_type == Self::ELEMENT_NODE
+        {
+            None
+        } else {
+            unimplemented!("node value should be implemented by subtraits.")
+        }
     }
+    /// Sets the value of the current node.
+    ///
+    /// MDN Reference: [Node.nodeValue]{https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeValue)
     fn set_node_value(&mut self, value: &str) {
         if !self.node_value().is_none() {
             todo!()
@@ -278,11 +294,11 @@ pub trait AsNode: AsEventTarget {
         }
     }
     /// Returns the parent element.
-    fn parent_element(&self) -> Option<&HTMLElementRef> {
+    fn parent_element(&self) -> Option<&HTMLElement> {
         todo!()
     }
     /// Returns the parent element mutably.
-    fn parent_element_mut(&mut self) -> Option<&mut HTMLElementRef> {
+    fn parent_element_mut(&mut self) -> Option<&mut HTMLElement> {
         todo!()
     }
     /// Returns the parent.

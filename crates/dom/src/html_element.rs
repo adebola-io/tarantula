@@ -1,2 +1,2 @@
 #[derive(Clone)]
-pub struct HTMLElementRef {}
+pub struct HTMLElement {}

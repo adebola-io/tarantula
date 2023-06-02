@@ -1,254 +1,268 @@
-// use std::{cell::RefCell, rc::Rc};
+use crate::{
+    AsChildNode, AsEventTarget, AsNode, AsParentNode, DOMException, DOMTokenList, HTMLElement,
+    InnerHtml, NamedNodeMap, Node,
+};
 
-// use crate::{Event, HtmlCollectionOf, Tag};
+pub struct ShadowRoot;
+pub struct ShadowRootInit;
+pub struct CheckVisibilityOptions;
+/// Element is the most general base class from which all objects in a Document inherit. It only has methods and properties common to all kinds of elements. More specific classes inherit from Element.
+pub struct Element {
+    node: Node,
+}
 
-// use super::{ChildNode, AsNode, AsParentNode};
+impl AsEventTarget for Element {
+    fn cast(&self) -> &crate::EventTarget {
+        AsEventTarget::cast(&self.node)
+    }
 
-// pub type Element = dyn AsElement;
-// pub type ElementRef = Rc<RefCell<Element>>;
+    fn cast_mut(&mut self) -> &mut crate::EventTarget {
+        AsEventTarget::cast_mut(&mut self.node)
+    }
+}
+impl AsNode for Element {
+    fn cast(&self) -> &Node {
+        &self.node
+    }
 
-// pub struct NamedNodeMap;
-// impl NamedNodeMap {
-//     fn set(&mut self, arg: &str, value: String) {
-//         todo!()
-//     }
+    fn cast_mut(&mut self) -> &mut Node {
+        &mut self.node
+    }
+    fn node_name(&self) -> &str {
+        self.tag_name()
+    }
+}
+impl AsChildNode for Element {}
+impl AsParentNode for Element {}
+impl InnerHtml for Element {
+    fn inner_html(&self) -> String {
+        todo!()
+    }
 
-//     fn get(&self, arg: &str) -> Option<&str> {
-//         todo!()
-//     }
+    fn set_inner_html(&mut self, value: &str) -> Result<(), DOMException> {
+        todo!()
+    }
+}
+impl AsElement for Element {
+    fn cast(&self) -> &Element {
+        self
+    }
+    fn cast_mut(&mut self) -> &mut Element {
+        self
+    }
+}
 
-//     fn len(&self) -> usize {
-//         todo!()
-//     }
-// }
-// pub struct DOMTokenList;
-// pub struct ShadowRootInit;
-// pub struct ShadowRootRef;
-// pub struct CheckVisibilityOptions;
-// pub struct Attr {
-//     pub name: String,
-// }
-// pub struct DOMRect;
-// pub struct DOMRectList;
-
-// pub trait AsElement: AsNode + ChildNode + AsParentNode + internal::AsElementInner {
-//     fn as_element(&self) -> &Element;
-//     fn as_element_mut(&mut self) -> &mut Element;
-//     fn attributes(&self) -> &NamedNodeMap {
-//         &self.z_as_element().attributes
-//     }
-//     fn attributes_mut(&mut self) -> &mut NamedNodeMap {
-//         &mut self.z_as_element_mut().attributes
-//     }
-//     fn class_list(&self) -> &DOMTokenList {
-//         &self.z_as_element().class_list
-//     }
-//     fn class_list_mut(&mut self) -> &mut DOMTokenList {
-//         &mut self.z_as_element_mut().class_list
-//     }
-//     /// Returns the value of element's class content attribute
-//     fn class_name(&self) -> &str {
-//         &self.z_as_element().class_name
-//     }
-//     /// Sets the value of the element's class content attribute.
-//     fn set_class_name(&mut self, value: &str) {
-//         self.z_as_element_mut().class_name = value.to_owned();
-//     }
-//     fn client_height(&self) -> usize {
-//         self.z_as_element().client_height
-//     }
-//     fn client_left(&self) -> usize {
-//         self.z_as_element().client_left
-//     }
-//     fn client_top(&self) -> usize {
-//         self.z_as_element().client_top
-//     }
-//     fn client_width(&self) -> usize {
-//         self.z_as_element().client_width
-//     }
-//     /// Returns the value of element's id content attribute.
-//     fn id(&self) -> &str {
-//         self.z_as_element().attributes.get("id").unwrap_or("")
-//     }
-//     /// Sets the value of element's id content attribute.
-//     fn set_id(&mut self, value: &str) {
-//         self.z_as_element_mut()
-//             .attributes
-//             .set("id", value.to_owned());
-//     }
-//     /// Returns the local name.
-//     fn local_name(&self) -> &str {
-//         &self.z_as_element().local_name
-//     }
-//     /// Returns the namespace.
-//     fn namespace_uri(&self) -> Option<&str> {
-//         self.z_as_element()
-//             .namespace_uri
-//             .as_ref()
-//             .map(|x| x.as_str())
-//     }
-//     fn outer_html(&self) -> &str {
-//         todo!()
-//     }
-//     fn set_outer_html(&mut self, value: &str) {
-//         todo!()
-//     }
-//     fn owner_document(&self) -> Option<&crate::Document> {
-//         AsNode::owner_document(self)
-//     }
-//     fn owner_document_mut(&mut self) -> Option<&mut crate::Document> {
-//         AsNode::owner_document_mut(self)
-//     }
-//     fn part(&self) -> &DOMTokenList {
-//         &self.z_as_element().part
-//     }
-//     fn part_mut(&mut self) -> &mut DOMTokenList {
-//         &mut self.z_as_element_mut().part
-//     }
-//     /// Returns the namespace prefix.
-//     fn prefix(&self) -> Option<&str> {
-//         self.z_as_element().prefix.as_ref().map(|x| x.as_str())
-//     }
-//     fn scroll_height(&self) -> usize {
-//         self.z_as_element().scroll_height
-//     }
-//     fn scroll_left(&self) -> usize {
-//         self.z_as_element().scroll_left
-//     }
-//     fn set_scroll_left(&mut self, value: usize) {
-//         self.z_as_element_mut().scroll_left = value
-//     }
-//     fn scroll_top(&self) -> usize {
-//         self.z_as_element().scroll_top
-//     }
-//     fn set_scroll_top(&mut self, value: usize) {
-//         self.z_as_element_mut().scroll_top = value;
-//     }
-//     fn scroll_width(&self) -> usize {
-//         self.z_as_element().scroll_width
-//     }
-//     /// Returns element's shadow root, if any, and if shadow root's mode is "open", and null otherwise.
-//     fn shadow_root(&self) -> Option<&ShadowRootRef> {
-//         self.z_as_element().shadow_root.as_ref()
-//     }
-//     /// Returns element's shadow root mutably, if any, and if shadow root's mode is "open", and null otherwise.
-//     fn shadow_root_mut(&mut self) -> Option<&mut ShadowRootRef> {
-//         self.z_as_element_mut().shadow_root.as_mut()
-//     }
-//     /// Returns the value of element's slot content attribute.
-//     fn slot(&self) -> &str {
-//         self.attributes().get("slot").unwrap_or("")
-//     }
-//     /// Sets the value of element's slot content attribute.
-//     fn set_slot(&mut self, value: &str) {
-//         self.attributes_mut().set("slot", value.to_owned())
-//     }
-//     /// Returns the HTML-uppercased qualified name.
-//     fn tag_name(&self) -> &str {
-//         self.z_as_element().tag.as_str()
-//     }
-//     /// Creates a shadow root for element and returns it.
-//     fn attach_shadow(&mut self, init: ShadowRootInit) -> &ShadowRootRef {
-//         todo!()
-//     }
-//     fn check_visibility(&self, options: Option<CheckVisibilityOptions>) -> bool {
-//         todo!()
-//     }
-//     /// Returns the first (starting at element) inclusive ancestor that matches selectors, and None otherwise.
-//     fn closest(&self, selector: &str) -> Option<&ElementRef> {
-//         todo!()
-//     }
-//     /// Returns the first (starting at element) inclusive ancestor that matches selectors mutably, and `None` otherwise.
-//     fn closest_mut(&mut self, selector: &str) -> Option<&mut ElementRef> {
-//         todo!()
-//     }
-//     /// Returns element's first attribute whose qualified name is `qualified_name`, and `None` if there is no such attribute otherwise.
-//     fn get_attribute(&self, qualified_name: &str) -> Option<&str> {
-//         todo!()
-//     }
-//     /// Returns element's attribute whose namespace is `namespace` and local name is `local_name`, and `None` if there is no such attribute otherwise.
-//     fn get_attribute_ns(&self, namespace: Option<&str>, local_name: &str) -> Option<&str> {
-//         todo!()
-//     }
-//     /// Returns the qualified names of all element's attributes. Can contain duplicates.
-//     fn get_attribute_names(&self) -> &[&str] {
-//         todo!()
-//     }
-//     fn get_attribute_node(&self) -> Option<&Attr> {
-//         todo!()
-//     }
-//     fn get_attribute_node_mut(&mut self) -> Option<&mut Attr> {
-//         todo!()
-//     }
-//     fn get_attribute_node_ns(&self, namespace: Option<&str>, local_name: &str) -> Option<&Attr> {
-//         todo!()
-//     }
-//     fn get_bounding_client_rect(&self) -> &DOMRect {
-//         todo!()
-//     }
-//     fn get_bounding_client_rect_mut(&mut self) -> &mut DOMRect {
-//         todo!()
-//     }
-//     fn get_client_rects(&self) -> &DOMRectList {
-//         todo!()
-//     }
-//     fn get_client_rects_mut(&mut self) -> &mut DOMRectList {
-//         todo!()
-//     }
-//     /// Returns a HTMLCollection of the elements in the object on which the method was invoked (a document or an element) that have all the classes given by classNames. The classNames argument is interpreted as a space-separated list of classes.
-//     fn get_elements_by_class_name(&self, class_names: &str) -> HtmlCollectionOf<Element> {
-//         todo!()
-//     }
-//     fn get_elements_by_tag_name(&self, qualified_name: Tag) -> HtmlCollectionOf<Element> {
-//         todo!()
-//     }
-//     fn get_elements_by_tag_name_ns(&self, namespace_uri: &str) -> HtmlCollectionOf<Element> {
-//         todo!()
-//     }
-//     /// Returns true if element has an attribute whose qualified name is `qualified_name`, and false otherwise.
-//     fn has_attribute(&self, qualified_name: &str) -> bool {
-//         self.z_as_element().attributes.get(qualified_name).is_some()
-//     }
-//     /// Returns true if element has an attribute whose namespace is namespace and local name is `local_name`.
-//     fn has_attribute_ns(&self, namespace: Option<&str>, local_name: &str) -> bool {
-//         todo!()
-//     }
-//     /// Returns true if element has attributes, and false otherwise.
-//     fn has_attributes(&self) -> bool {
-//         self.attributes().len() > 0
-//     }
-//     fn has_pointer_capture(&self, pointer_id: usize) -> bool {
-//         todo!()
-//     }
-// }
-
-// #[doc(hidden)]
-// pub(crate) mod internal {
-//     use crate::{DOMTokenList, Document, NamedNodeMap, ShadowRootRef, Tag};
-
-//     pub struct ElementInner {
-//         pub attributes: NamedNodeMap,
-//         pub class_list: DOMTokenList,
-//         pub class_name: String,
-//         pub client_height: usize,
-//         pub client_left: usize,
-//         pub client_top: usize,
-//         pub client_width: usize,
-//         pub local_name: String,
-//         pub namespace_uri: Option<String>,
-//         pub owner_document: *mut Document,
-//         pub part: DOMTokenList,
-//         pub prefix: Option<String>,
-//         pub scroll_height: usize,
-//         pub scroll_left: usize,
-//         pub scroll_top: usize,
-//         pub scroll_width: usize,
-//         pub shadow_root: Option<ShadowRootRef>,
-//         pub tag: Tag,
-//     }
-
-//     pub trait AsElementInner {
-//         fn z_as_element(&self) -> &ElementInner;
-//         fn z_as_element_mut(&mut self) -> &mut ElementInner;
-//     }
-// }
+pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
+    /// Returns a reference to an element.
+    fn cast(&self) -> &Element;
+    /// Returns a mutable reference to an element.
+    fn cast_mut(&mut self) -> &mut Element;
+    /// Returns a reference to a [`NamedNodeMap`] containing the assigned attributes of the corresponding HTML element.
+    ///
+    /// MDN Reference: [`Element.attributes`](https://developer.mozilla.org/en-US/docs/Web/API/Element/attributes)
+    fn attributes(&self) -> &NamedNodeMap {
+        todo!()
+    }
+    /// Returns a mutable reference to a [`NamedNodeMap`] containing the assigned attributes of the corresponding HTML element.
+    ///
+    /// MDN Reference: [`Element.attributes`](https://developer.mozilla.org/en-US/docs/Web/API/Element/attributes)
+    fn attributes_mut(&mut self) -> &mut NamedNodeMap {
+        todo!()
+    }
+    /// Returns a reference to the [`DOMTokenList`] containing the list of class attributes.
+    ///
+    /// MDN Reference: [`Element.classList`](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList)
+    fn class_list(&self) -> &DOMTokenList {
+        todo!()
+    }
+    /// Returns a mutable reference to the [`DOMTokenList`] containing the list of class attributes.
+    ///
+    /// MDN Reference: [`Element.classList`](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList)
+    fn class_list_mut(&mut self) -> &mut DOMTokenList {
+        todo!()
+    }
+    /// Returns a string slice representing the class of the element.
+    ///
+    /// MDN Reference: [`Element.className`](https://developer.mozilla.org/en-US/docs/Web/API/Element/className)
+    fn class_name(&self) -> &str {
+        todo!()
+    }
+    /// Sets the value of the element's class attribute.
+    ///
+    /// MDN Reference: [`Element.className`](https://developer.mozilla.org/en-US/docs/Web/API/Element/className)
+    fn set_class_name(&mut self, value: &str) {
+        todo!()
+    }
+    /// Returns a number representing the inner height of the element.
+    ///
+    /// MDN Reference: [`Element.clientHeight`](https://developer.mozilla.org/en-US/docs/Web/API/Element/clientHeight)
+    fn client_height(&self) -> usize {
+        todo!()
+    }
+    /// Returns a number representing the width of the left border of the element.
+    ///
+    /// MDN Reference: [`Element.clientLeft`](https://developer.mozilla.org/en-US/docs/Web/API/Element/clientLeft)
+    fn client_left(&self) -> usize {
+        todo!()
+    }
+    /// Returns a number representing the width of the top border of the element.
+    ///
+    /// MDN Reference: [`Element.clientTop`](https://developer.mozilla.org/en-US/docs/Web/API/Element/clientTop)
+    fn client_top(&self) -> usize {
+        todo!()
+    }
+    /// Returns a number representing the inner width of the element.
+    ///
+    /// MDN Reference: [`Element.clientWidth`](https://developer.mozilla.org/en-US/docs/Web/API/Element/clientWidth)
+    fn client_width(&self) -> usize {
+        todo!()
+    }
+    /// Returns a string slice representing the id of the element. It returns an empty slice if there is no id specified.
+    ///
+    /// MDN Reference: [`Element.id`](https://developer.mozilla.org/en-US/docs/Web/API/Element/id).
+    fn id(&self) -> &str {
+        todo!()
+    }
+    /// Sets the value of the id attribute on the element.
+    ///
+    /// MDN Reference: [`Element.id`](https://developer.mozilla.org/en-US/docs/Web/API/Element/id).
+    fn set_id(&mut self, value: &str) {
+        todo!()
+    }
+    /// Returns a string slice representing the local part of the qualified name of the element.
+    ///
+    /// MDN Reference: [`Element.localName`](https://developer.mozilla.org/en-US/docs/Web/API/Element/localName).
+    fn local_name(&self) -> &str {
+        todo!()
+    }
+    /// The namespace URI of the element, or [`None`] if it is no namespace.
+    ///
+    /// MDN Reference: [`Element.namespaceURI`](https://developer.mozilla.org/en-US/docs/Web/API/Element/namespaceURI).
+    fn namespace_uri(&self) -> Option<&str> {
+        todo!()
+    }
+    /// Returns a string slice containing an HTML serialization of the element and its descendants.
+    ///
+    /// MDN Reference: [`Element.outerHTML`](https://developer.mozilla.org/en-US/docs/Web/API/Element/outerHTML).
+    fn outer_html(&self) -> &str {
+        todo!()
+    }
+    /// Sets the outer html of the element.
+    ///
+    /// MDN Reference: [`Element.outerHTML`](https://developer.mozilla.org/en-US/docs/Web/API/Element/outerHTML).
+    fn set_outer_html(&mut self, value: &str) -> Result<(), DOMException> {
+        todo!()
+    }
+    /// Represents the part identifier(s) of the element (i.e. set using the part attribute), returned as a DOMTokenList.
+    ///
+    /// MDN Reference: [`Element.part`](https://developer.mozilla.org/en-US/docs/Web/API/Element/part).
+    fn part(&self) -> &DOMTokenList {
+        todo!()
+    }
+    /// Represents the part identifier(s) of the element (i.e. set using the part attribute), returned as a DOMTokenList.
+    ///
+    /// MDN Reference: [`Element.part`](https://developer.mozilla.org/en-US/docs/Web/API/Element/part).
+    fn part_mut(&mut self) -> &mut DOMTokenList {
+        todo!()
+    }
+    /// Returns the namespace prefix of the element.
+    ///
+    /// MDN Reference: [`Element.prefix`](https://developer.mozilla.org/en-US/docs/Web/API/Element/prefix).
+    fn prefix(&self) -> Option<&str> {
+        todo!()
+    }
+    /// Returns a number representing the scroll view height of an element.
+    ///
+    /// MDN Reference: [`Element.scrollHeight`](https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollHeight).
+    fn scroll_height(&self) -> usize {
+        todo!()
+    }
+    /// Returns a number representing the left scroll offset of the element.
+    ///
+    /// MDN Reference: [`Element.scrollLeft`](https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollLeft).
+    fn scroll_left(&self) -> usize {
+        todo!()
+    }
+    /// Sets the left scroll offset of the element.
+    ///
+    /// MDN Reference: [`Element.scrollLeft`](https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollLeft).
+    fn set_scroll_left(&mut self, value: usize) {
+        todo!()
+    }
+    /// Returns a number representing number of pixels the top of the element is scrolled vertically.
+    ///
+    /// MDN Reference: [`Element.scrollTop`](https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollTop).
+    fn scroll_top(&self) -> usize {
+        todo!()
+    }
+    /// Sets the number of pixels the top of the element is scrolled vertically.
+    ///
+    /// MDN Reference: [`Element.scrollTop`](https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollTop).
+    fn set_scroll_top(&mut self, value: usize) {
+        todo!()
+    }
+    /// Returns a number representing the scroll view width of an element.
+    ///
+    /// MDN Reference: [`Element.scrollWidth`](https://developer.mozilla.org/en-US/docs/Web/API/Element/scrollWidth).
+    fn scroll_width(&self) -> usize {
+        todo!()
+    }
+    /// Returns reference to the open shadow root that is hosted by the element, or [`None`] if no open shadow root is present.
+    ///
+    /// MDN Reference: [`Element.shadowRoot`](https://developer.mozilla.org/en-US/docs/Web/API/Element/shadowRoot).
+    fn shadow_root(&self) -> Option<&ShadowRoot> {
+        todo!()
+    }
+    /// Returns a mutable reference to the open shadow root that is hosted by the element, or [`None`] if no open shadow root is present.
+    ///
+    /// MDN Reference: [`Element.shadowRoot`](https://developer.mozilla.org/en-US/docs/Web/API/Element/shadowRoot).
+    fn shadow_root_mut(&mut self) -> Option<&mut ShadowRoot> {
+        todo!()
+    }
+    /// Returns the name of the shadow DOM slot the element is inserted in, or an empty string.
+    ///
+    /// MDN Reference: [`Element.slot`](https://developer.mozilla.org/en-US/docs/Web/API/Element/slot).
+    fn slot(&self) -> &str {
+        todo!()
+    }
+    /// Sets the name of the shadow DOM slot the element is inserted in, or an empty string.
+    ///
+    /// MDN Reference: [`Element.slot`](https://developer.mozilla.org/en-US/docs/Web/API/Element/slot).
+    fn set_slot(&self, value: &str) {
+        todo!()
+    }
+    /// Returns a string with the name of the tag for the given element. For example, if the element is an `<img>`, its tag name is "IMG" (for HTML documents; it may be cased differently for XML/XHTML documents).
+    ///
+    /// MDN Reference: [`Element.tagName`](https://developer.mozilla.org/en-US/docs/Web/API/Element/tagName).
+    fn tag_name(&self) -> &str {
+        todo!()
+    }
+    // METHODS
+    /// Attaches a shadow DOM tree to the specified element and returns a mutable reference to its [`ShadowRoot`].
+    ///
+    /// MDN Reference: [`Element.attachShadow`](https://developer.mozilla.org/en-US/docs/Web/API/Element/attachShadow).
+    fn attach_shadow(&mut self, init: ShadowRootInit) -> &mut ShadowRoot {
+        todo!()
+    }
+    fn check_visibility(&self, options: Option<CheckVisibilityOptions>) -> bool {
+        todo!()
+    }
+    /// Traverses the element and its parents (heading toward the document root) until it finds a node that matches the specified CSS selector.
+    ///
+    /// MDN Reference: [`Element.closest`](https://developer.mozilla.org/en-US/docs/Web/API/Element/closest)
+    fn closest<T: AsElement>(&self, selector: &str) -> Option<&T> {
+        todo!()
+    }
+    /// Traverses the element and its parents (heading toward the document root) until it finds a node that matches the specified CSS selector.
+    ///
+    /// MDN Reference: [`Element.closest`](https://developer.mozilla.org/en-US/docs/Web/API/Element/closest)
+    fn closest_mut<T: AsElement>(&mut self, selector: &str) -> Option<&mut T> {
+        todo!()
+    }
+    /// Returns the value of a specified attribute on the element.
+    ///
+    /// MDN Reference: [`Element.getAttribute`](https://developer.mozilla.org/en-US/docs/Web/API/Element/getAttribute)
+    fn get_attribute(&self, qualified_name: &str) -> Option<&str> {
+        todo!()
+    }
+}
