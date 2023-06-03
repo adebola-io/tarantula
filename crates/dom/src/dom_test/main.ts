@@ -1,1 +1,1 @@
-const doc = new Document();
+document.createElement("div");

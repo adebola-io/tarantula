@@ -5,6 +5,8 @@
 // // /// A generic collection (array-like object similar to arguments) of elements (in document order) and offers methods and properties for selecting from the list.
 // // pub trait HtmlCollectionBase {}
 
+use crate::AsElement;
+
 pub struct HTMLCollection<'a> {
     pub(crate) items: &'a Vec<()>,
 }
@@ -43,12 +45,13 @@ pub struct MutHTMLCollection<'a> {
 //     }
 // }
 
-// pub struct HtmlCollectionOf<'a, T>
-// where
-//     T: 'a + AsElement + ?Sized,
-// {
-//     items: Vec<&'a mut T>,
-// }
+pub struct HTMLCollectionOf<'a, T: AsElement> {
+    items: &'a Vec<T>,
+}
+
+pub struct MutHTMLCollectionOf<'a, T: AsElement> {
+    items: &'a mut Vec<T>,
+}
 
 // impl<'a, T> HtmlCollectionOf<'a, T>
 // where
