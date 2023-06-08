@@ -1,6 +1,8 @@
 #[derive(Debug)]
 pub enum DOMException {
     HierarchyRequestError(&'static str),
+    SyntaxError(&'static str),
+    InvalidCharacterError(&'static str),
 }
 
 impl DOMException {

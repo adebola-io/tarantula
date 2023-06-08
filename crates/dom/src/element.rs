@@ -1,6 +1,7 @@
 use crate::{
     AsChildNode, AsEventTarget, AsNode, AsParentNode, Attr, DOMException, DOMTokenList,
-    HTMLCollectionOf, HTMLElement, InnerHtml, MutHTMLCollectionOf, NamedNodeMap, Node,
+    HTMLCollectionOf, HTMLElement, InnerHtml, MutDOMTokenList, MutHTMLCollectionOf, NamedNodeMap,
+    Node,
 };
 
 pub struct ShadowRoot;
@@ -31,12 +32,14 @@ impl AsNode for Element {
     fn cast(&self) -> &Node {
         &self.node
     }
-
     fn cast_mut(&mut self) -> &mut Node {
         &mut self.node
     }
     fn node_name(&self) -> &str {
         self.tag_name()
+    }
+    fn clone_node(&self, deep: bool) -> Self {
+        todo!()
     }
 }
 impl AsChildNode for Element {}
@@ -79,14 +82,14 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// Returns a reference to the [`DOMTokenList`] containing the list of class attributes.
     ///
     /// MDN Reference: [`Element.classList`](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList).
-    fn class_list(&self) -> &DOMTokenList {
-        todo!()
+    fn class_list(&self) -> DOMTokenList {
+        DOMTokenList::from_attribute(self.attributes().get_class())
     }
-    /// Returns a mutable reference to the [`DOMTokenList`] containing the list of class attributes.
+    /// Returns a mutable reference to the [`MutDOMTokenList`] containing the list of class attributes.
     ///
     /// MDN Reference: [`Element.classList`](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList).
-    fn class_list_mut(&mut self) -> &mut DOMTokenList {
-        todo!()
+    fn class_list_mut(&mut self) -> MutDOMTokenList {
+        MutDOMTokenList::from_attribute(self.attributes_mut().get_class_mut())
     }
     /// Returns a string slice representing the class of the element.
     ///
@@ -362,13 +365,16 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
         todo!()
     }
     fn has_attribute(&self, qualified_name: &str) -> bool {
-        todo!()
+        AsElement::cast(self)
+            .attributes
+            .get_named_item(qualified_name)
+            .is_some()
     }
     fn has_attribute_ns(&self, namespace: Option<&str>, qualified_name: &str) -> bool {
         todo!()
     }
     fn has_attributes(&self) -> bool {
-        todo!()
+        AsElement::cast(self).attributes.len() > 0
     }
     fn has_pointer_capture(&self, pointer_id: usize) -> bool {
         todo!()

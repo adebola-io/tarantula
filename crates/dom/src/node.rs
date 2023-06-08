@@ -121,6 +121,11 @@ impl AsNode for Node {
     fn cast_mut(&mut self) -> &mut Node {
         self
     }
+    fn clone_node(&self, deep: bool) -> Self {
+        let noderef = helpers::clone_node(AsNode::cast(self), deep);
+        noderef.inner.borrow_mut().parent = None;
+        noderef
+    }
 }
 
 impl AsEventTarget for Node {
@@ -386,11 +391,7 @@ pub trait AsNode: AsEventTarget {
     /// let mut node = Node::new();
     /// assert!(!node.is_same_node(&node.clone_node(false)));
     /// ```
-    fn clone_node(&self, deep: bool) -> Node {
-        let noderef = helpers::clone_node(AsNode::cast(self), deep);
-        noderef.inner.borrow_mut().parent = None;
-        noderef
-    }
+    fn clone_node(&self, deep: bool) -> Self;
     /// Returns a bitmask indicating the position of other relative to node.
     fn compare_document_position(&self) -> u8 {
         todo!()
@@ -716,6 +717,11 @@ impl AsNode for ParentNode {
     fn cast_mut(&mut self) -> &mut Node {
         &mut self.inner
     }
+    fn clone_node(&self, deep: bool) -> Self {
+        ParentNode {
+            inner: self.inner.clone_node(deep),
+        }
+    }
 }
 impl AsParentNode for ParentNode {}
 
@@ -820,6 +826,11 @@ impl AsNode for ChildNode {
     }
     fn cast_mut(&mut self) -> &mut Node {
         &mut self.inner
+    }
+    fn clone_node(&self, deep: bool) -> Self {
+        ChildNode {
+            inner: self.inner.clone_node(deep),
+        }
     }
 }
 impl AsChildNode for ChildNode {}
