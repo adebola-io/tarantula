@@ -3,20 +3,20 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::Node;
+use crate::{Attr, HTMLElement, Node};
 
 #[derive(Debug)]
-pub struct Document {
+pub struct DocumentBase {
     pub url: String,
     pub nodes: Vec<Node>,
 }
 
 #[derive(Debug, Clone)]
-pub struct DocumentRef {
-    pub(crate) inner: Rc<RefCell<Document>>,
+pub struct Document {
+    pub(crate) inner: Rc<RefCell<DocumentBase>>,
 }
 
-impl PartialEq for DocumentRef {
+impl PartialEq for Document {
     fn eq(&self, other: &Self) -> bool {
         Rc::ptr_eq(&self.inner, &other.inner)
     }
@@ -24,11 +24,25 @@ impl PartialEq for DocumentRef {
 
 #[derive(Debug, Clone)]
 pub struct WeakDocumentRef {
-    pub(crate) inner: Weak<RefCell<Document>>,
+    pub(crate) inner: Weak<RefCell<DocumentBase>>,
 }
 
 impl PartialEq for WeakDocumentRef {
     fn eq(&self, other: &Self) -> bool {
         self.inner.ptr_eq(&other.inner)
+    }
+}
+
+impl Document {
+    /// Create an HTML attribute with the specified `local_name`.
+    pub fn create_attribute(&self, local_name: &str) -> Attr {
+        let weak_ref = WeakDocumentRef {
+            inner: Rc::downgrade(&self.inner),
+        };
+        Attr::in_document(local_name, weak_ref)
+    }
+    /// Create an HTML element with the specified `tagname`.
+    pub fn create_element(&self, tagname: &str) -> HTMLElement {
+        todo!()
     }
 }

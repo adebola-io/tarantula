@@ -1,42 +1,68 @@
 use std::ops::Index;
 
-use crate::{Attr, DOMException};
+use crate::{AsElement, AsNode, Attr, DOMException, Element};
 
+pub enum ListType {
+    ClassList,
+    RelList,
+    HtmlFor,
+    SandBox,
+    Part,
+}
+
+impl ListType {
+    fn as_str(&self) -> &str {
+        match self {
+            ListType::ClassList => "class",
+            ListType::RelList => "rel",
+            ListType::HtmlFor => todo!(),
+            ListType::SandBox => todo!(),
+            ListType::Part => "part",
+        }
+    }
+}
+
+/**
+ * A set of space-separated tokens. Such a set is returned by Element.classList, HTMLLinkElement.relList, HTMLAnchorElement.relList, HTMLAreaElement.relList, HTMLIframeElement.sandbox, or HTMLOutputElement.htmlFor. It is indexed beginning with 0 as with JavaScript Array objects. DOMTokenList is always case-sensitive.
+ *
+ * [MDN Reference](https://developer.mozilla.org/docs/Web/API/DOMTokenList)
+ */
 pub struct MutDOMTokenList<'a> {
-    owner_attribute: &'a mut Attr,
-    len: usize,
+    owner_element: &'a mut Element,
+    list_type: ListType,
 }
 
+/**
+ * A set of space-separated tokens. Such a set is returned by Element.classList, HTMLLinkElement.relList, HTMLAnchorElement.relList, HTMLAreaElement.relList, HTMLIframeElement.sandbox, or HTMLOutputElement.htmlFor. It is indexed beginning with 0 as with JavaScript Array objects. DOMTokenList is always case-sensitive.
+ *
+ * [MDN Reference](https://developer.mozilla.org/docs/Web/API/DOMTokenList)
+ */
 pub struct DOMTokenList<'a> {
-    owner_attribute: &'a Attr,
-    len: usize,
-}
-
-impl<'a> DOMTokenList<'a> {
-    /// Create a token list from an attribute.
-    pub fn from_attribute(owner_attribute: &'a Attr) -> Self {
-        Self {
-            owner_attribute,
-            len: owner_attribute.value.split(' ').count(),
-        }
-    }
+    owner_element: &'a Element,
+    list_type: ListType,
 }
 
 impl<'a> MutDOMTokenList<'a> {
     /// Create a token list from an attribute.
-    pub fn from_attribute(owner_attribute: &'a mut Attr) -> Self {
-        let len = owner_attribute.value.split(' ').count();
+    pub(crate) fn from_element(owner_element: &'a mut Element, list_type: ListType) -> Self {
         Self {
-            owner_attribute,
-            len,
+            owner_element,
+            list_type,
         }
     }
-}
-
-impl<'a> MutDOMTokenList<'a> {
+    fn owner_attribute(&self) -> Option<&Attr> {
+        self.owner_element
+            .get_attribute_node(self.list_type.as_str())
+    }
+    fn owner_attribute_mut(&mut self) -> Option<&mut Attr> {
+        self.owner_element
+            .get_attribute_node_mut(self.list_type.as_str())
+    }
     /// Returns the number of tokens.
     pub fn len(&self) -> usize {
-        self.len
+        self.owner_attribute()
+            .map(|attribute| attribute.value.split(' ').count())
+            .unwrap_or(0)
     }
     /// Returns true if the list contains a specified token.
     /// # Example
@@ -44,10 +70,9 @@ impl<'a> MutDOMTokenList<'a> {
     /// // Add an example.
     /// ```
     pub fn contains(&self, token: &str) -> bool {
-        self.owner_attribute
-            .value
-            .split(' ')
-            .any(|_token| _token == token)
+        self.owner_attribute()
+            .map(|attribute| attribute.value.split(' ').any(|_token| _token == token))
+            .unwrap_or(false)
     }
     /// Returns the token with index `index`
     /// # Example
@@ -55,7 +80,9 @@ impl<'a> MutDOMTokenList<'a> {
     /// // Add an example.
     /// ```
     pub fn item(&self, index: usize) -> Option<&str> {
-        self.owner_attribute.value.split(' ').nth(index)
+        self.owner_attribute()
+            .map(|attribute| attribute.value.split(' ').nth(index))
+            .flatten()
     }
     /// Adds all arguments passed, except those already present.
     /// # Errors
@@ -67,10 +94,17 @@ impl<'a> MutDOMTokenList<'a> {
     /// ```
     pub fn add(&mut self, token: &str) -> Result<(), DOMException> {
         validate_token(token)?;
+        if self.owner_attribute().is_none() {
+            let attr = self
+                .owner_element
+                .owner_document()
+                .unwrap()
+                .create_attribute(self.list_type.as_str());
+            self.owner_element.attributes_mut().set_named_item(attr);
+        }
         if !self.contains(token) {
-            self.owner_attribute.value.push(' ');
-            self.owner_attribute.value.push_str(token);
-            self.len += 1;
+            self.owner_attribute_mut().unwrap().value.push(' ');
+            self.owner_attribute_mut().unwrap().value.push_str(token);
         }
         Ok(())
     }
@@ -84,13 +118,9 @@ impl<'a> MutDOMTokenList<'a> {
     /// ```
     pub fn remove(&mut self, token: &str) -> Result<(), DOMException> {
         validate_token(token)?;
-        self.owner_attribute.value = self
-            .owner_attribute
-            .value
-            .split(' ')
-            .filter(|t| *t != token)
-            .collect();
-        self.len -= 1;
+        if let Some(attr) = self.owner_attribute_mut() {
+            attr.value = attr.value.split(' ').filter(|t| *t != token).collect();
+        }
         Ok(())
     }
     /// Replaces a token with another token.
@@ -108,25 +138,27 @@ impl<'a> MutDOMTokenList<'a> {
         validate_token(token)?;
         validate_token(new_token)?;
         let mut is_changed = false;
-        self.owner_attribute.value = self
-            .owner_attribute
-            .value
-            .split(' ')
-            .map(|old_token| {
-                if old_token != token {
-                    is_changed = true;
-                    new_token
-                } else {
-                    old_token
-                }
-            })
-            .collect();
+        if let Some(attr) = self.owner_attribute_mut() {
+            attr.value = attr
+                .value
+                .split(' ')
+                .map(|old_token| {
+                    if old_token != token {
+                        is_changed = true;
+                        new_token
+                    } else {
+                        old_token
+                    }
+                })
+                .collect();
+        }
+
         Ok(is_changed)
     }
     /// Returns true if the token is in the associated attribute's supported tokens.
     /// # Errors
     /// Returns a `TypeError` if the associated attribute has no supported tokens defined.
-    pub fn supports(token: &str) -> bool {
+    pub fn supports(_token: &str) -> Result<bool, DOMException> {
         todo!()
     }
     /// Toggles a token, removing if it is present and adding it otherwise.
@@ -158,24 +190,44 @@ impl<'a> MutDOMTokenList<'a> {
     }
 }
 
-impl Index<usize> for MutDOMTokenList<'_> {
+impl<'a> Index<usize> for MutDOMTokenList<'a> {
     type Output = str;
 
     fn index(&self, index: usize) -> &Self::Output {
-        match self.owner_attribute.value.split(' ').nth(index) {
-            Some(value) => value,
+        match self.owner_attribute() {
+            Some(attr) => match attr.value.split(' ').nth(index) {
+                Some(value) => value,
+                None => panic!(
+                    "Index out of bounds for DOMTokenList. No value at index {}",
+                    index
+                ),
+            },
             None => panic!(
                 "Index out of bounds for DOMTokenList. No value at index {}",
-                index
+                index,
             ),
         }
     }
 }
 
 impl<'a> DOMTokenList<'a> {
+    /// Create a token list from an attribute.
+    pub(crate) fn from_element(owner_element: &'a Element, list_type: ListType) -> Self {
+        Self {
+            owner_element,
+            list_type,
+        }
+    }
+    /// Returns the attribute of the list if it exists.
+    fn owner_attribute(&self) -> Option<&Attr> {
+        self.owner_element
+            .get_attribute_node(self.list_type.as_str())
+    }
     /// Returns the number of tokens
     pub fn len(&self) -> usize {
-        self.len
+        self.owner_attribute()
+            .map(|attribute| attribute.value.split(' ').count())
+            .unwrap_or(0)
     }
     /// Returns true if the list contains a specified token.
     /// # Example
@@ -183,10 +235,9 @@ impl<'a> DOMTokenList<'a> {
     /// // Add an example.
     /// ```
     pub fn contains(&self, token: &str) -> bool {
-        self.owner_attribute
-            .value
-            .split(' ')
-            .any(|_token| _token == token)
+        self.owner_attribute()
+            .map(|attribute| attribute.value.split(' ').any(|_token| _token == token))
+            .unwrap_or(false)
     }
     /// Returns the token with index `index`
     /// # Example
@@ -194,7 +245,9 @@ impl<'a> DOMTokenList<'a> {
     /// // Add an example.
     /// ```
     pub fn item(&self, index: usize) -> Option<&str> {
-        self.owner_attribute.value.split(' ').nth(index)
+        self.owner_attribute()
+            .map(|attribute| attribute.value.split(' ').nth(index))
+            .flatten()
     }
 
     /// Returns true if the token is in the associated attribute's supported tokens.
@@ -205,20 +258,25 @@ impl<'a> DOMTokenList<'a> {
     }
 }
 
-impl Index<usize> for DOMTokenList<'_> {
+impl<'a> Index<usize> for DOMTokenList<'a> {
     type Output = str;
 
     fn index(&self, index: usize) -> &Self::Output {
-        match self.owner_attribute.value.split(' ').nth(index) {
-            Some(value) => value,
+        match self.owner_attribute() {
+            Some(attr) => match attr.value.split(' ').nth(index) {
+                Some(value) => value,
+                None => panic!(
+                    "Index out of bounds for DOMTokenList. No value at index {}",
+                    index
+                ),
+            },
             None => panic!(
                 "Index out of bounds for DOMTokenList. No value at index {}",
-                index
+                index,
             ),
         }
     }
 }
-
 fn validate_token(token: &str) -> Result<(), DOMException> {
     if token.len() == 0 {
         return Err(DOMException::SyntaxError(

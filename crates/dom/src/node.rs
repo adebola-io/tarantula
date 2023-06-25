@@ -1,5 +1,5 @@
 use crate::{
-    AsEventTarget, DOMException, DocumentRef, EventTarget, HTMLCollection, HTMLElement,
+    AsElement, AsEventTarget, DOMException, Document, EventTarget, HTMLCollection, HTMLElement,
     MutHTMLCollection, MutNodeListOf, NodeListOf, WeakDocumentRef,
 };
 use std::{
@@ -285,7 +285,7 @@ pub trait AsNode: AsEventTarget {
         }
     }
     /// Returns the node document. Returns None for documents.
-    fn owner_document(&self) -> Option<DocumentRef> {
+    fn owner_document(&self) -> Option<Document> {
         if self.node_type() == Self::DOCUMENT_NODE {
             return None;
         }
@@ -293,7 +293,7 @@ pub trait AsNode: AsEventTarget {
             weak_document_ref
                 .inner
                 .upgrade()
-                .map(|inner| DocumentRef { inner })
+                .map(|inner| Document { inner })
         } else {
             None
         }
@@ -775,15 +775,12 @@ pub trait AsParentNode: AsNode {
         Ok(())
     }
     /// Traverse tree and find the first element that matches a selector, if it exists.
-    fn query_selector(&self, selector: &str) {
-        todo!()
-    }
-    fn query_selector_mut(&mut self, selector: &str) {
-        todo!()
+    fn query_selector<T: AsElement>(&self, selector: &str) -> Option<T> {
+        unimplemented!()
     }
     /// Traverse tree and find all the elements that matches a selector.
-    fn query_selector_all(&self, selector: &str) {
-        todo!()
+    fn query_selector_all<T: AsElement>(&self, selector: &str) -> Option<T> {
+        unimplemented!()
     }
     // /// Replace all children of node with nodes, while replacing strings in nodes with equivalent Text nodes.
     // /// # Panics

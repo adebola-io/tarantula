@@ -21,7 +21,7 @@ pub use animatable::*;
 pub use attr::*;
 pub use document::*;
 pub use document_type::*;
-pub use dom_token_list::*;
+pub use dom_token_list::{DOMTokenList, MutDOMTokenList};
 pub use domexception::*;
 pub use element::*;
 pub use event::*;
