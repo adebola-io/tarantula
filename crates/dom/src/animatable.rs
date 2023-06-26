@@ -1,6 +1,6 @@
 pub struct Keyframe;
 pub enum AnimationOptions {
-    number(usize),
+    Number(usize),
     KeyframeAnimationOptions {
         composite: Option<()>,
         id: Option<String>,

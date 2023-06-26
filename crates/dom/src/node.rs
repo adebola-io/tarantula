@@ -110,6 +110,18 @@ impl Node {
             || node_type == Self::DOCUMENT_NODE
             || node_type == Self::DOCUMENT_FRAGMENT_NODE
     }
+    /// Create a node inside a document.
+    pub(crate) fn in_document(node_type: u8, weak_ref: WeakDocumentRef) -> Self {
+        Self {
+            inner: Rc::new(RefCell::new(NodeBase {
+                node_type,
+                event_target: EventTarget::new(),
+                owner_document: Some(weak_ref),
+                parent: None,
+                children: vec![],
+            })),
+        }
+    }
 }
 
 impl AsNode for Node {
@@ -222,14 +234,18 @@ pub trait AsNode: AsEventTarget {
             _ => None,
         }
     }
-    /// Returns a string slice containing the name of the Node.
+    /// Returns a string containing the name of the Node.
     ///
     /// The structure of the name will differ with the node type. E.g. An [`HTMLElement`] will contain the name of the corresponding tag, like `"audio"` for an [`HTMLAudioElement`], a [`Text`] node will have the `"#text"` string, or a [`Document`] node will have the `"#document"` string.
     ///
     /// MDN Reference: [`Node.nodeName`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeName)
-    fn node_name(&self) -> &str {
+    /// # Example
+    /// ```
+    /// // Add an example.
+    /// ```
+    fn node_name(&self) -> String {
         let node_type = self.node_type();
-        if node_type == Self::DOCUMENT_NODE {
+        String::from(if node_type == Self::DOCUMENT_NODE {
             "#document"
         } else if node_type == Self::CDATA_SECTION_NODE {
             "#cdata-section"
@@ -241,7 +257,7 @@ pub trait AsNode: AsEventTarget {
             "#text"
         } else {
             unimplemented!("Node name should be implemented by Node-inherited structs.")
-        }
+        })
     }
     /// Returns an `u8` representing the type of the node. Possible values are:
     ///

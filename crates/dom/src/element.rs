@@ -1,8 +1,8 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, mem::ManuallyDrop, rc::Rc};
 
 use crate::{
     dom_token_list::ListType, AsChildNode, AsEventTarget, AsNode, AsParentNode, Attr, DOMException,
-    DOMTokenList, HTMLCollectionOf, InnerHtml, MutDOMTokenList, NamedNodeMap, Node,
+    DOMTokenList, HTMLCollectionOf, InnerHtml, MutDOMTokenList, NamedNodeMap, Node, Tag,
 };
 
 pub struct ShadowRoot;
@@ -18,11 +18,13 @@ pub enum NameSpaceUri {
     XHTML,
 }
 
-/// Element is the most general base class from which all objects in a Document inherit. It only has methods and properties common to all kinds of elements. More specific classes inherit from Element.
-pub struct ElementBase {
-    node: Node,
+pub(crate) struct ElementBase {
     attributes: Option<NamedNodeMap>,
+    node: Node,
+    tagname: Tag,
+    is_html: bool,
 }
+/// Element is the most general base class from which all objects in a Document inherit. It only has methods and properties common to all kinds of elements. More specific classes inherit from Element.
 pub struct Element {
     pub(crate) inner_ref: Rc<RefCell<ElementBase>>,
 }
@@ -37,8 +39,37 @@ impl Element {
             inner_ref: self.inner_ref.clone(),
         }
     }
+
+    pub(crate) fn in_document(
+        tagname: &str,
+        is_html: bool,
+        weak_ref: crate::WeakDocumentRef,
+    ) -> Element {
+        let element = Self {
+            inner_ref: Rc::new(RefCell::new(ElementBase {
+                attributes: None,
+                is_html,
+                node: Node::in_document(1, weak_ref),
+                tagname: Tag::from(tagname),
+            })),
+        };
+        element.inner().attributes = Some(NamedNodeMap {
+            owner_element: Rc::downgrade(&element.inner_ref),
+            items: vec![],
+        });
+        element
+    }
+
+    pub(crate) fn is_html(&self) -> bool {
+        self.inner().is_html
+    }
 }
 
+impl PartialEq for Element {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.inner_ref, &other.inner_ref)
+    }
+}
 impl AsEventTarget for Element {
     fn cast(&self) -> &crate::EventTarget {
         AsEventTarget::cast(&self.inner().node)
@@ -55,14 +86,16 @@ impl AsNode for Element {
     fn cast_mut(&mut self) -> &mut Node {
         &mut self.inner().node
     }
-    fn node_name(&self) -> &str {
+    fn node_name(&self) -> String {
         self.tag_name()
     }
     fn clone_node(&self, deep: bool) -> Self {
         let mut element = Element {
             inner_ref: Rc::new(RefCell::new(ElementBase {
                 node: self.inner().node.clone_node(deep),
+                is_html: self.inner().is_html,
                 attributes: None,
+                tagname: self.inner().tagname.clone(),
             })),
         };
         element.inner().attributes = Some(NamedNodeMap {
@@ -98,9 +131,9 @@ impl AsElement for Element {
 }
 
 pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
-    /// Returns a reference to an element.
+    /// Downcasts struct to a reference to an element.
     fn cast(&self) -> &Element;
-    /// Returns a mutable reference to an element.
+    /// Downcasts struct to a mutable reference to an element.
     fn cast_mut(&mut self) -> &mut Element;
     /// Returns a reference to a [`NamedNodeMap`] containing the assigned attributes of the corresponding HTML element.
     ///
@@ -118,13 +151,13 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
             .as_mut()
             .unwrap()
     }
-    /// Returns a reference to the [`DOMTokenList`] containing the list of class attributes.
+    /// Returns a [`DOMTokenList`] containing the list of class attributes.
     ///
     /// MDN Reference: [`Element.classList`](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList).
     fn class_list(&self) -> DOMTokenList {
         DOMTokenList::from_element(AsElement::cast(self), ListType::ClassList)
     }
-    /// Returns a mutable reference to the [`MutDOMTokenList`] containing the list of class attributes.
+    /// Returns a [`MutDOMTokenList`] containing the list of class attributes.
     ///
     /// MDN Reference: [`Element.classList`](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList).
     fn class_list_mut(&mut self) -> MutDOMTokenList {
@@ -133,21 +166,43 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// Returns a string slice representing the class of the element.
     ///
     /// MDN Reference: [`Element.className`](https://developer.mozilla.org/en-US/docs/Web/API/Element/className).
+    /// # Example
+    /// ```
+    /// use dom::{Document, AsElement};
+    ///
+    /// let document = Document::new();
+    /// let mut element = document.create_element("p");
+    /// assert_eq!(element.class_name(), ""); // class is initially empty.
+    ///
+    /// element.set_attribute("class", "paragraph");
+    /// assert_eq!(element.class_name(), "paragraph");
+    /// ```
     fn class_name(&self) -> &str {
         self.attributes()
             .get_named_item("class")
-            .map(|attr| attr.value.as_str())
+            .map(|attr| attr.value())
             .unwrap_or("")
     }
     /// Sets the value of the element's class attribute.
     ///
     /// MDN Reference: [`Element.className`](https://developer.mozilla.org/en-US/docs/Web/API/Element/className).
+    /// # Example
+    /// ```
+    /// use dom::{Document, AsElement};
+    ///
+    /// let document = Document::new();
+    /// let mut element = document.create_element("p");
+    /// assert_eq!(element.class_name(), ""); // class is initially empty.
+    ///
+    /// element.set_class_name("paragraph");
+    /// assert_eq!(element.class_name(), "paragraph");
+    /// ```
     fn set_class_name(&mut self, value: &str) {
         match self.attributes_mut().get_named_item_mut("class") {
-            Some(attr) => attr.value = value.to_owned(),
+            Some(attr) => attr.set_value(value.to_owned()),
             None => {
                 let mut class_attr = self.owner_document().unwrap().create_attribute("class");
-                class_attr.value = value.to_owned();
+                class_attr.set_value(value.to_owned());
                 self.attributes_mut().set_named_item(class_attr);
             }
         }
@@ -179,21 +234,44 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// Returns a string slice representing the id of the element. It returns an empty slice if there is no id specified.
     ///
     /// MDN Reference: [`Element.id`](https://developer.mozilla.org/en-US/docs/Web/API/Element/id).
+    /// # Example
+    /// ```
+    /// use dom::{Document, AsElement};
+    ///
+    /// let document = Document::new();
+    /// let mut element = document.create_element("p");
+    /// assert_eq!(element.id(), ""); // id is initially empty.
+    ///
+    /// element.set_attribute("id", "paragraph-1");
+    /// assert_eq!(element.id(), "paragraph-1");
+    /// ```
     fn id(&self) -> &str {
         self.attributes()
             .get_named_item("id")
-            .map(|attr| attr.value.as_str())
+            .map(|attr| attr.value())
             .unwrap_or("")
     }
     /// Sets the value of the id attribute on the element.
     ///
     /// MDN Reference: [`Element.id`](https://developer.mozilla.org/en-US/docs/Web/API/Element/id).
+    ///
+    /// # Example
+    /// ```
+    /// use dom::{Document, AsElement};
+    ///
+    /// let document = Document::new();
+    /// let mut element = document.create_element("p");
+    /// assert_eq!(element.id(), ""); // id is initially empty.
+    ///
+    /// element.set_id("paragraph-1");
+    /// assert_eq!(element.id(), "paragraph-1");
+    /// ```
     fn set_id(&mut self, value: &str) {
         match self.attributes_mut().get_named_item_mut("id") {
-            Some(attr) => attr.value = value.to_string(),
+            Some(attr) => attr.set_value(value.to_string()),
             None => {
                 let mut attr = self.owner_document().unwrap().create_attribute("id");
-                attr.value = value.to_string();
+                attr.set_value(value.to_string());
                 self.attributes_mut().set_named_item(attr);
             }
         }
@@ -304,8 +382,13 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// it may be cased differently for XML/XHTML documents).
     ///
     /// MDN Reference: [`Element.tagName`](https://developer.mozilla.org/en-US/docs/Web/API/Element/tagName).
-    fn tag_name(&self) -> &str {
-        todo!()
+    fn tag_name(&self) -> String {
+        let element = AsElement::cast(self);
+        if element.is_html() {
+            element.inner().tagname.to_uppercase()
+        } else {
+            todo!()
+        }
     }
     // METHODS
     /// Attaches a shadow DOM tree to the specified element and returns a mutable reference to its [`ShadowRoot`].
@@ -327,9 +410,25 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     ///
     /// MDN Reference: [`Element.getAttribute()`](https://developer.mozilla.org/en-US/docs/Web/API/Element/getAttribute).
     fn get_attribute(&self, qualified_name: &str) -> Option<&str> {
+        if matches!(AsElement::cast(self).inner().tagname, Tag::Script) && qualified_name == "nonce"
+        {
+            return Some("");
+        }
+        let mut qualified_name = qualified_name;
+        let mut lowercased_opt = None;
+
+        if AsElement::cast(self).is_html()
+            && qualified_name.chars().any(|char| !char.is_lowercase())
+        {
+            lowercased_opt = Some(qualified_name.to_lowercase());
+        }
+
         self.attributes()
-            .get_named_item(qualified_name)
-            .map(|attr| attr.name.as_str())
+            .get_named_item(match &lowercased_opt {
+                Some(lowercased) => lowercased,
+                None => qualified_name,
+            })
+            .map(|attr| attr.value())
     }
     /// Returns the string value of the attribute with the specified namespace and name.
     ///
@@ -337,15 +436,29 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     fn get_attribute_ns(&self, namespace: Option<&str>, local_name: &str) -> Option<&str> {
         self.attributes()
             .get_named_item_ns(namespace, local_name)
-            .map(|attr| attr.name.as_str())
+            .map(|attr| attr.__name.as_str())
     }
     /// Returns a vector containing the attribute names of the element.
     ///
     /// MDN Reference: [`Element.getAttributeNames()`](https://developer.mozilla.org/en-US/docs/Web/API/Element/getAttributeNames).
+    /// # Example
+    /// ```
+    /// use dom::{Document, AsElement};
+    ///
+    /// let document = Document::new();
+    /// let mut a = document.create_element("a");
+    ///
+    /// a.set_id("link-1");
+    /// a.set_class_name("user-link");
+    /// a.set_attribute("href", "http://example.com");
+    /// a.set_attribute("referrerpolicy", "no-referrer");
+    ///
+    /// assert_eq!(a.get_attribute_names(), vec!["id", "class", "href", "referrerpolicy"]);
+    /// ```
     fn get_attribute_names(&self) -> Vec<&str> {
         self.attributes()
             .iter()
-            .map(|attr| attr.name.as_str())
+            .map(|attr| attr.__name.as_str())
             .collect()
     }
     /// Returns a reference to the specified attribute of the specified element, as an [`Attr`] node.
@@ -377,18 +490,15 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
         self.attributes_mut()
             .get_named_item_ns_mut(namespace, local_name)
     }
-    fn get_bounding_client_rect(&self) -> &DOMRect {
+    fn get_bounding_client_rect(&self) -> DOMRect {
         todo!()
     }
-    fn get_bounding_client_rect_mut(&mut self) -> &mut DOMRect {
+    fn get_client_rects(&self) -> DOMRectList {
         todo!()
     }
-    fn get_client_rects(&self) -> &DOMRectList {
-        todo!()
-    }
-    fn get_client_rects_mut(&mut self) -> &mut DOMRectList {
-        todo!()
-    }
+    /// Returns a collection of elements that have the given class names, from within this element.
+    ///
+    /// MDN Reference: [`Element.getElementsByClassName()`](https://developer.mozilla.org/docs/Web/API/Element/getElementsByClassName)
     fn get_elements_by_class_name(&self, class_names: &str) -> HTMLCollectionOf<Element> {
         let mut items = vec![];
         for child in self.children().items {
@@ -402,14 +512,17 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
         }
         HTMLCollectionOf { items }
     }
-    fn get_elements_by_tag_name<T: AsElement>(&self, qualified_name: &str) -> HTMLCollectionOf<T> {
+    /// Returns a collection of elements that have the given tag, from within this element.
+    ///
+    /// MDN Reference: [`Element.getElementsByTagName()`](https://developer.mozilla.org/docs/Web/API/Element/getElementsByTagName)
+    fn get_elements_by_tag_name(&self, qualified_name: &str) -> HTMLCollectionOf<Element> {
         todo!()
     }
-    fn get_elements_by_tag_name_ns<T: AsElement>(
+    fn get_elements_by_tag_name_ns(
         &self,
         namespace: Option<&str>,
         local_name: &str,
-    ) -> HTMLCollectionOf<T> {
+    ) -> HTMLCollectionOf<Element> {
         todo!()
     }
     fn has_attribute(&self, qualified_name: &str) -> bool {
@@ -480,7 +593,12 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
         todo!()
     }
     fn set_attribute(&mut self, qualified_name: &str, value: &str) {
-        todo!()
+        let mut attr = self
+            .owner_document()
+            .unwrap()
+            .create_attribute(qualified_name);
+        attr.set_value(value.to_owned());
+        self.attributes_mut().set_named_item(attr);
     }
     fn set_attribute_ns(&mut self, namespace: Option<&str>, qualified_name: &str, value: &str) {
         todo!()

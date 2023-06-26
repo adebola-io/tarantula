@@ -1,14 +1,22 @@
 use std::{
     cell::RefCell,
+    collections::HashMap,
     rc::{Rc, Weak},
 };
 
-use crate::{Attr, HTMLElement, Node};
+use crate::{Attr, Element, HTMLElement, Node, Tag};
 
-#[derive(Debug)]
-pub struct DocumentBase {
+pub(crate) struct DocumentBase {
     pub url: String,
-    pub nodes: Vec<Node>,
+    node_to_element_map: HashMap<Node, Element>,
+}
+
+impl std::fmt::Debug for DocumentBase {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DocumentBase")
+            .field("url", &self.url)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -23,7 +31,7 @@ impl PartialEq for Document {
 }
 
 #[derive(Debug, Clone)]
-pub struct WeakDocumentRef {
+pub(crate) struct WeakDocumentRef {
     pub(crate) inner: Weak<RefCell<DocumentBase>>,
 }
 
@@ -34,6 +42,14 @@ impl PartialEq for WeakDocumentRef {
 }
 
 impl Document {
+    pub fn new() -> Self {
+        Self {
+            inner: Rc::new(RefCell::new(DocumentBase {
+                url: String::new(),
+                node_to_element_map: HashMap::new(),
+            })),
+        }
+    }
     /// Create an HTML attribute with the specified `local_name`.
     pub fn create_attribute(&self, local_name: &str) -> Attr {
         let weak_ref = WeakDocumentRef {
@@ -43,6 +59,9 @@ impl Document {
     }
     /// Create an HTML element with the specified `tagname`.
     pub fn create_element(&self, tagname: &str) -> HTMLElement {
-        todo!()
+        let weak_ref = WeakDocumentRef {
+            inner: Rc::downgrade(&self.inner),
+        };
+        HTMLElement::in_document(tagname, weak_ref)
     }
 }

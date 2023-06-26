@@ -3,7 +3,7 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{AsEventTarget, AsNode, DocumentBase, Element, ElementBase, Node, WeakDocumentRef};
+use crate::{AsEventTarget, AsNode, Element, ElementBase, Node, WeakDocumentRef};
 
 /// A DOM element's attribute.
 /// In most DOM methods, you will probably directly retrieve the attribute as a string (e.g., [`Element::get_attribute`], but certain functions (e.g., [`Element::get_attribute_node`] or means of iterating give Attr types.
@@ -12,20 +12,26 @@ use crate::{AsEventTarget, AsNode, DocumentBase, Element, ElementBase, Node, Wea
 /// [Element::get_attribute_node]: crate::Element::get_attribute_node
 pub struct Attr {
     node: Node,
-    pub(crate) name: String,
+    pub(crate) __name: String,
     namespace_uri: Option<String>,
-    owner_document: WeakDocumentRef,
     owner_element_ref: Option<Weak<RefCell<ElementBase>>>,
-    prefix: Option<String>,
-    pub(crate) value: String,
+    pub(crate) __value: Option<String>,
     #[deprecated]
     specified: bool,
 }
 
 impl Attr {
+    #[allow(deprecated)]
     /// Create a new attribute in a document.
     pub(crate) fn in_document(local_name: &str, weak_ref: WeakDocumentRef) -> Attr {
-        todo!()
+        Self {
+            node: Node::in_document(2, weak_ref),
+            __name: local_name.to_owned(),
+            namespace_uri: None,
+            owner_element_ref: None,
+            __value: None,
+            specified: false,
+        }
     }
     /// Set the owner element of the attribute.
     pub(crate) fn set_owner_element(&mut self, element: Weak<RefCell<ElementBase>>) {
@@ -40,17 +46,11 @@ impl Attr {
     }
     #[inline(always)]
     pub fn name(&self) -> &str {
-        &self.name
+        &self.__name
     }
     #[inline(always)]
     pub fn namespace_uri(&self) -> Option<&str> {
         self.namespace_uri.as_ref().map(|x| x.as_str())
-    }
-    pub fn owner_document(&self) -> &DocumentBase {
-        unsafe { &*(self.owner_document.inner.upgrade().unwrap().as_ptr()) }
-    }
-    pub fn owner_document_mut(&self) -> &mut DocumentBase {
-        unsafe { &mut *(self.owner_document.inner.upgrade().unwrap().as_ptr()) }
     }
     /// Returns the element that owns the attribute.
     ///
@@ -63,15 +63,27 @@ impl Attr {
         }
     }
     #[inline(always)]
-    pub fn prefix(&self) -> Option<&str> {
-        self.prefix.as_deref()
+    pub fn prefix(&self) -> Option<String> {
+        if self
+            .owner_element()
+            .is_some_and(|element| element.is_html())
+        {
+            None
+        } else {
+            self.__name
+                .split_once(':')
+                .map(|tuple| tuple.0.to_lowercase())
+        }
     }
     #[inline(always)]
     pub fn value(&self) -> &str {
-        &self.value
+        match &self.__value {
+            Some(value) => value,
+            None => "",
+        }
     }
     pub fn set_value(&mut self, value: String) {
-        self.value = value;
+        self.__value = Some(value);
     }
     #[allow(deprecated)]
     #[deprecated]
@@ -99,16 +111,18 @@ impl AsNode for Attr {
         &mut self.node
     }
 
+    fn node_name(&self) -> String {
+        self.name().to_owned()
+    }
+
     #[allow(deprecated)]
     fn clone_node(&self, deep: bool) -> Self {
         Self {
             node: self.node.clone_node(deep),
-            name: self.name.to_owned(),
+            __name: self.__name.to_owned(),
             namespace_uri: self.namespace_uri.clone(),
-            owner_document: self.owner_document.clone(),
             owner_element_ref: None,
-            prefix: self.prefix.clone(),
-            value: self.value.to_owned(),
+            __value: self.__value.to_owned(),
             specified: self.specified,
         }
     }

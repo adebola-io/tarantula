@@ -8,8 +8,10 @@
    </head>
    <body>
       <script>
-         const element = document.createElement("div");
-         element.classList.add("stuff");
+         const element = document.createElement("audio");
+         const attr = document.createAttributeNS("name", "name:class");
+         element.setAttributeNode(attr);
+         console.log(element, element.nodeName);
       </script>
    </body>
 </html>

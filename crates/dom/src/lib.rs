@@ -1,4 +1,4 @@
-// #![allow(unused)]
+#![allow(unused)]
 mod animatable;
 mod attr;
 mod document;

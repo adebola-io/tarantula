@@ -359,8 +359,10 @@ impl Tag {
         }
     }
     /// Convert the tag to an uppercase string slice.
-    pub fn as_str(&self) -> &str {
-        todo!()
+    pub fn to_uppercase(&self) -> String {
+        let mut upper = self.to_string();
+        upper.make_ascii_uppercase();
+        upper
     }
     /// Check if the tag is unknown.
     pub fn is_unknown(&self) -> bool {
