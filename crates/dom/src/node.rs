@@ -1,6 +1,6 @@
 use crate::{
     AsElement, AsEventTarget, DOMException, Document, EventTarget, HTMLCollection, HTMLElement,
-    MutHTMLCollection, MutNodeListOf, NodeListOf, WeakDocumentRef,
+    MutNodeListOf, NodeListOf, WeakDocumentRef,
 };
 use std::{
     cell::RefCell,
@@ -62,7 +62,7 @@ impl<T: AsNode> From<&T> for WeakNodeRef {
 /// Node is an interface from which a number of DOM API object types inherit. It allows those types to be treated similarly; for example, inheriting the same set of methods, or being tested in the same way.
 #[derive(Debug, Clone)]
 pub struct Node {
-    inner: Rc<RefCell<NodeBase>>,
+    pub(crate) inner: Rc<RefCell<NodeBase>>,
 }
 
 impl<T: AsNode> PartialEq<T> for Node {
@@ -121,6 +121,162 @@ impl Node {
                 children: vec![],
             })),
         }
+    }
+    /// Returns a raw pointer to the underlying node base.
+    pub(crate) fn get_base_ptr(&self) -> *mut NodeBase {
+        self.inner.as_ptr()
+    }
+
+    /// Inner implementation of `remove()`.
+    fn __remove(&mut self) {
+        if let Some(mut parent) = self.parent_node() {
+            AsNode::cast_mut(&mut parent).__remove_child(self).unwrap();
+        }
+    }
+
+    /// Inner implementation of `insert_before()`.
+    fn __insert_before<'a, T: AsNode>(
+        &mut self,
+        new_child: &'a mut T,
+        reference_node: Option<&mut impl AsNode>,
+    ) -> Result<&'a T, DOMException> {
+        let mut index = match reference_node {
+            Some(reference_node) => {
+                if AsNode::cast(reference_node).is_child_of(self) {
+                    AsNode::cast(reference_node).index().unwrap()
+                } else {
+                    return Err(DOMException::HierarchyRequestError(
+                        "Reference node is not a child of this node",
+                    ));
+                }
+            }
+            None => 0,
+        };
+        helpers::validate_hierarchy(self, new_child)?;
+        if new_child.node_type() == Self::DOCUMENT_FRAGMENT_NODE {
+            let children = new_child.child_nodes_mut();
+            while !children.items.is_empty() {
+                let reference_node = unsafe { &mut *(self.inner.as_ptr()) }
+                    .children
+                    .get_mut(index);
+                self.__insert_before(&mut children.items.remove(0), reference_node)?;
+                index += 1;
+            }
+            return Ok(new_child);
+        }
+
+        let mut child = ChildNode::from(&*new_child);
+        // Disconnect from former parent.
+        AsNode::cast_mut(&mut child).__remove();
+
+        AsNode::cast_mut(&mut child).set_parent(Some((WeakNodeRef::from(&*self), index)));
+        let children = self.child_nodes_mut().items;
+        children.insert(index, child);
+
+        // Shift all following indexes.
+        loop {
+            index += 1;
+            AsNode::cast_mut(&mut children[index]).set_index(index);
+            if index + 1 == children.len() {
+                break;
+            }
+        }
+        Ok(new_child)
+    }
+
+    /// Inner implementation of `remove_child()`.
+    fn __remove_child<'a, T: AsNode>(
+        &mut self,
+        node: &'a mut T,
+    ) -> Result<&'a mut T, DOMException> {
+        if !AsNode::cast(node).is_child_of(self) {
+            return Err(DOMException::HierarchyRequestError(
+                "Node to remove is not a child of this node.",
+            ));
+        }
+        let children = self.child_nodes_mut().items;
+        let node_ref = AsNode::cast_mut(node);
+        let mut index = node_ref.index().unwrap();
+        children.remove(index);
+        // Shift indexes.
+        while index < children.len() {
+            AsNode::cast_mut(&mut children[index]).set_index(index);
+            index += 1;
+        }
+        // Remove parent pointer.
+        node_ref.set_parent(None);
+        Ok(node)
+    }
+
+    /// Inner implementation of `replace_child()`.
+    fn __replace_child<'a, T: AsNode>(
+        &mut self,
+        new_child: &mut impl AsNode,
+        old_child: &'a mut T,
+    ) -> Result<&'a mut T, DOMException> {
+        let old_child_as_node = AsNode::cast_mut(old_child);
+        if !old_child_as_node.is_child_of(self) {
+            return Err(DOMException::HierarchyRequestError(
+                "Node to be replaced is not a child of this node.",
+            ));
+        }
+
+        helpers::validate_hierarchy(self, new_child)?;
+
+        if new_child.node_type() == Self::DOCUMENT_FRAGMENT_NODE {
+            let children = new_child.child_nodes_mut();
+            let mut i = 0;
+            while i < children.items.len() {
+                AsNode::cast_mut(self)
+                    .__insert_before(&mut children.items.remove(i), Some(old_child))?;
+                i += 1;
+            }
+            self.remove_child(old_child).unwrap();
+            return Ok(old_child);
+        }
+
+        let index = old_child_as_node.index().unwrap();
+        let mut new_child = ChildNode::from(&*new_child);
+        // Disconnect from old parent.
+        AsNode::cast_mut(&mut new_child).__remove();
+
+        AsNode::cast_mut(&mut new_child)
+            .set_parent(old_child_as_node.inner.borrow_mut().parent.take());
+        self.child_nodes_mut().items[index] = new_child;
+
+        Ok(old_child)
+    }
+
+    /// Refresh the DOM.
+    fn update_document(&self) {
+        // Refresh DOM.
+        if let Some(document) = self.owner_document() {
+            document
+                .inner
+                .borrow_mut()
+                .refresh(&document.lookup_node(self.get_base_ptr()))
+        }
+    }
+
+    /// Inner implementation of `after()`.
+    fn __append_child<'a, T: AsNode>(&mut self, child: &'a mut T) -> Result<&'a T, DOMException> {
+        helpers::validate_hierarchy(self, child)?;
+
+        if child.node_type() == Self::DOCUMENT_FRAGMENT_NODE {
+            for subchild in child.child_nodes_mut() {
+                self.__append_child(subchild)?;
+            }
+            child.child_nodes_mut().items.clear();
+        } else {
+            let mut childnode = ChildNode::from(&*child);
+            // Disconnect from former parent.
+            AsNode::cast_mut(&mut childnode).__remove();
+            let weak_reference = WeakNodeRef::from(&*self);
+            let index = helpers::get_children_length(self);
+            childnode.inner.set_parent(Some((weak_reference, index)));
+            self.child_nodes_mut().items.push(childnode);
+        }
+        Ok(child)
     }
 }
 
@@ -379,23 +535,10 @@ pub trait AsNode: AsEventTarget {
     ///
     /// ```
     fn append_child<'a, T: AsNode>(&mut self, child: &'a mut T) -> Result<&'a T, DOMException> {
-        helpers::validate_hierarchy(self, child)?;
-
-        if child.node_type() == Self::DOCUMENT_FRAGMENT_NODE {
-            for subchild in child.child_nodes_mut() {
-                self.append_child(subchild)?;
-            }
-            child.child_nodes_mut().items.clear();
-        } else {
-            let mut childnode = ChildNode::from(&*child);
-            // Disconnect from former parent.
-            childnode.remove();
-            let weak_reference = WeakNodeRef::from(&*self);
-            let index = helpers::get_children_length(self);
-            childnode.inner.set_parent(Some((weak_reference, index)));
-            self.child_nodes_mut().items.push(childnode);
-        }
-        Ok(child)
+        let this = AsNode::cast_mut(self);
+        let result = this.__append_child(child)?;
+        this.update_document();
+        Ok(result)
     }
     /// Returns a duplicate of node.
     /// If deep is true, the node's descendants are also cloned.
@@ -481,49 +624,10 @@ pub trait AsNode: AsEventTarget {
         new_child: &'a mut T,
         reference_node: Option<&mut impl AsNode>,
     ) -> Result<&'a T, DOMException> {
-        let mut index = match reference_node {
-            Some(reference_node) => {
-                if AsNode::cast(reference_node).is_child_of(self) {
-                    AsNode::cast(reference_node).index().unwrap()
-                } else {
-                    return Err(DOMException::HierarchyRequestError(
-                        "Reference node is not a child of this node",
-                    ));
-                }
-            }
-            None => 0,
-        };
-        helpers::validate_hierarchy(self, new_child)?;
-        if new_child.node_type() == Self::DOCUMENT_FRAGMENT_NODE {
-            let children = new_child.child_nodes_mut();
-            while !children.items.is_empty() {
-                let reference_node = unsafe { &mut *(AsNode::cast(self).inner.as_ptr()) }
-                    .children
-                    .get_mut(index);
-                self.insert_before(&mut children.items.remove(0), reference_node)?;
-                index += 1;
-            }
-            return Ok(new_child);
-        }
-
-        let mut child = ChildNode::from(&*new_child);
-        // Disconnect from former parent.
-        child.remove();
-
-        AsNode::cast_mut(&mut child).set_parent(Some((WeakNodeRef::from(&*self), index)));
-        let children = self.child_nodes_mut().items;
-        children.insert(index, child);
-
-        // Shift all following indexes.
-        loop {
-            index += 1;
-            AsNode::cast_mut(&mut children[index]).set_index(index);
-            if index + 1 == children.len() {
-                break;
-            }
-        }
-
-        Ok(new_child)
+        let this = AsNode::cast_mut(self);
+        let result = this.__insert_before(new_child, reference_node)?;
+        this.update_document();
+        Ok(result)
     }
     /// Accepts a namespace URI as an argument and returns a boolean value with a value of true if the namespace is the default namespace on the given node or false if not.
     ///
@@ -579,7 +683,7 @@ pub trait AsNode: AsEventTarget {
     fn normalize(&mut self) {
         todo!()
     }
-    /// Removes a child node and returns the removed node. It does nothing if the node to remove is not a child of this node.
+    /// Removes a child node and returns the removed node.
     ///
     /// MDN Reference: [`Node.removeChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/removeChild)
     /// # Errors
@@ -600,23 +704,10 @@ pub trait AsNode: AsEventTarget {
     /// assert!(child.parent_node().is_none());
     /// ```
     fn remove_child<'a, T: AsNode>(&mut self, node: &'a mut T) -> Result<&'a mut T, DOMException> {
-        if !AsNode::cast(node).is_child_of(self) {
-            return Err(DOMException::HierarchyRequestError(
-                "Node to remove is not a child of this node.",
-            ));
-        }
-        let children = self.child_nodes_mut().items;
-        let node_ref = AsNode::cast_mut(node);
-        let mut index = node_ref.index().unwrap();
-        children.remove(index);
-        // Shift indexes.
-        while index < children.len() {
-            AsNode::cast_mut(&mut children[index]).set_index(index - 1);
-            index += 1;
-        }
-        // Remove parent pointer.
-        node_ref.set_parent(None);
-        Ok(node)
+        let this = AsNode::cast_mut(self);
+        let result = this.__remove_child(node)?;
+        this.update_document();
+        Ok(result)
     }
     /// Replaces one child Node of the current one with the second one given in parameter.
     ///
@@ -642,35 +733,10 @@ pub trait AsNode: AsEventTarget {
         new_child: &mut impl AsNode,
         old_child: &'a mut T,
     ) -> Result<&'a mut T, DOMException> {
-        let old_child_as_node = AsNode::cast_mut(old_child);
-        if !old_child_as_node.is_child_of(self) {
-            return Err(DOMException::HierarchyRequestError(
-                "Node to be replaced is not a child of this node.",
-            ));
-        }
-        helpers::validate_hierarchy(self, new_child)?;
-
-        if new_child.node_type() == Self::DOCUMENT_FRAGMENT_NODE {
-            let children = new_child.child_nodes_mut();
-            let mut i = 0;
-            while i < children.items.len() {
-                self.insert_before(&mut children.items.remove(i), Some(old_child))?;
-                i += 1;
-            }
-            self.remove_child(old_child).unwrap();
-            return Ok(old_child);
-        }
-
-        let index = old_child_as_node.index().unwrap();
-        let mut new_child = ChildNode::from(&*new_child);
-        // Disconnect from old parent.
-        new_child.remove();
-
-        AsNode::cast_mut(&mut new_child)
-            .set_parent(old_child_as_node.inner.borrow_mut().parent.take());
-        self.child_nodes_mut().items[index] = new_child;
-
-        Ok(old_child)
+        let this = AsNode::cast_mut(self);
+        let result = this.__replace_child(new_child, old_child)?;
+        this.update_document();
+        Ok(result)
     }
     const ELEMENT_NODE: u8 = 1;
     const ATTRIBUTE_NODE: u8 = 2;
@@ -746,10 +812,16 @@ pub trait AsParentNode: AsNode {
         todo!()
     }
     fn children(&self) -> HTMLCollection {
-        todo!()
-    }
-    fn children_mut(&mut self) -> MutHTMLCollection {
-        todo!()
+        HTMLCollection {
+            items: unsafe { &*AsNode::cast(self).inner.as_ptr() }
+                .children
+                .iter()
+                .map(|child_node| {
+                    let node_base = child_node.inner.inner.as_ptr();
+                    self.owner_document().unwrap().lookup_node(node_base)
+                })
+                .collect(),
+        }
     }
     /// Returns the first child that is an element.
     fn first_element_child(&self) {
@@ -776,6 +848,7 @@ pub trait AsParentNode: AsNode {
     ) -> Result<(), DOMException> {
         let node = AsNode::cast_mut(node.into());
         self.append_child(node)?;
+        // DOM updates are triggered already.|
         Ok(())
     }
     /// Inserts nodes before the first child of node, while replacing strings in nodes with equivalent Text nodes.
@@ -787,7 +860,8 @@ pub trait AsParentNode: AsNode {
     ) -> Result<(), DOMException> {
         let node = AsNode::cast_mut(node.into());
         let none: Option<&mut Node> = None;
-        self.insert_before(node, none)?;
+        AsNode::cast_mut(self).insert_before(node, none)?;
+        // DOM updates are triggered already.|
         Ok(())
     }
     /// Traverse tree and find the first element that matches a selector, if it exists.
@@ -863,6 +937,7 @@ pub trait AsChildNode: AsNode {
                 None => parent.append_child(node)?,
             };
         }
+        // DOM updates are triggered already.
         Ok(())
     }
     /// Inserts nodes just before node, while replacing strings in nodes with equivalent Text nodes.
@@ -876,12 +951,17 @@ pub trait AsChildNode: AsNode {
         if let Some(mut parent) = self.parent_node() {
             parent.insert_before(node, Some(self))?;
         }
+        // DOM updates are triggered already.
         Ok(())
     }
-    /// Removes node.
+    /// Removes node from its parent. If the node has no parent then nothing happens.
+    /// MDN Reference
     fn remove(&mut self) {
-        if let Some(mut parent) = self.parent_node() {
-            parent.remove_child(self).unwrap();
+        let node = AsNode::cast_mut(self);
+        let former_parent = node.parent_node();
+        node.__remove();
+        if let Some(parent) = former_parent {
+            AsNode::cast(&parent).update_document();
         }
     }
     /// Replaces node with nodes, while replacing strings in nodes with equivalent Text nodes.
@@ -895,6 +975,7 @@ pub trait AsChildNode: AsNode {
         if let Some(mut parent) = node.parent_node() {
             parent.replace_child(AsNode::cast_mut(self), node)?;
         }
+        // DOM updates are triggered already.
         Ok(())
     }
 }

@@ -10,6 +10,7 @@ use crate::{AsEventTarget, AsNode, Element, ElementBase, Node, WeakDocumentRef};
 ///
 /// [Element::get_attribute]: crate::Element::get_attribute
 /// [Element::get_attribute_node]: crate::Element::get_attribute_node
+#[derive(Debug)]
 pub struct Attr {
     node: Node,
     pub(crate) __name: String,

@@ -166,7 +166,6 @@ impl<'a> MutDOMTokenList<'a> {
         let mut string = String::new();
         if let Some(attr) = self.owner_attribute_mut() {
             for value in attr.value().split(' ') {
-                // println!("{}", value);
                 if value != token {
                     if !string.is_empty() {
                         string.push(' ')

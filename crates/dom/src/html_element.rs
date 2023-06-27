@@ -1,10 +1,11 @@
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    AsChildNode, AsElement, AsEventTarget, AsNode, AsParentNode, Element, InnerHtml,
+    AsChildNode, AsElement, AsEventTarget, AsNode, AsParentNode, Element, InnerHtml, Node,
     WeakDocumentRef,
 };
 
+#[derive(Debug)]
 pub(crate) struct HTMLElementBase {
     element: Element,
 }
@@ -12,8 +13,15 @@ pub(crate) struct HTMLElementBase {
 /// Any HTML element. Some elements directly implement this interface, while others implement it via an interface that inherits it.
 ///
 /// MDN Reference: [`HTMLElement`](https://developer.mozilla.org/docs/Web/API/HTMLElement)
+#[derive(Debug)]
 pub struct HTMLElement {
     inner: Rc<RefCell<HTMLElementBase>>,
+}
+
+impl<T: AsNode> PartialEq<T> for HTMLElement {
+    fn eq(&self, other: &T) -> bool {
+        AsNode::cast(self) == other
+    }
 }
 
 impl HTMLElement {

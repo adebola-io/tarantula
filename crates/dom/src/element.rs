@@ -2,7 +2,8 @@ use std::{cell::RefCell, mem::ManuallyDrop, rc::Rc};
 
 use crate::{
     dom_token_list::ListType, AsChildNode, AsEventTarget, AsNode, AsParentNode, Attr, DOMException,
-    DOMTokenList, HTMLCollectionOf, InnerHtml, MutDOMTokenList, NamedNodeMap, Node, Tag,
+    DOMTokenList, DocumentBase, HTMLCollection, HTMLCollectionOf, InnerHtml, LiveCollectionType,
+    MutDOMTokenList, NamedNodeMap, Node, Tag,
 };
 
 pub struct ShadowRoot;
@@ -18,15 +19,24 @@ pub enum NameSpaceUri {
     XHTML,
 }
 
+#[derive(Debug)]
 pub(crate) struct ElementBase {
     attributes: Option<NamedNodeMap>,
     node: Node,
-    tagname: Tag,
+    tag: Tag,
     is_html: bool,
 }
+
 /// Element is the most general base class from which all objects in a Document inherit. It only has methods and properties common to all kinds of elements. More specific classes inherit from Element.
+#[derive(Debug)]
 pub struct Element {
     pub(crate) inner_ref: Rc<RefCell<ElementBase>>,
+}
+
+impl<T: AsNode> PartialEq<T> for Element {
+    fn eq(&self, other: &T) -> bool {
+        AsNode::cast(self) == other
+    }
 }
 
 impl Element {
@@ -34,10 +44,35 @@ impl Element {
         unsafe { &mut *self.inner_ref.as_ptr() }
     }
     /// Create a new Element that references the same base.
-    fn clone_ref(&self) -> Self {
+    pub(crate) fn clone_ref(&self) -> Self {
         Self {
             inner_ref: self.inner_ref.clone(),
         }
+    }
+    /// Search the descendants of this element for elements that have a set of class names.
+    pub(crate) fn class_search(&self, class_names: &str) -> Vec<Element> {
+        let mut matches = vec![];
+        for child in self.children().items {
+            if class_names
+                .split(' ')
+                .all(|class_name| child.class_list().contains(class_name))
+            {
+                matches.push(child.clone_ref());
+            }
+            matches.append(&mut child.class_search(class_names));
+        }
+        matches
+    }
+    /// Search the descendants of this element for elements that have a tag.
+    pub(crate) fn tag_search(&self, tag: &Tag) -> Vec<Element> {
+        let mut matches = vec![];
+        for child in self.children().items {
+            if matches!(&child.inner().tag, tag) {
+                matches.push(child.clone_ref())
+            }
+            matches.append(&mut child.tag_search(tag))
+        }
+        matches
     }
 
     pub(crate) fn in_document(
@@ -50,7 +85,7 @@ impl Element {
                 attributes: None,
                 is_html,
                 node: Node::in_document(1, weak_ref),
-                tagname: Tag::from(tagname),
+                tag: Tag::from(tagname),
             })),
         };
         element.inner().attributes = Some(NamedNodeMap {
@@ -63,13 +98,20 @@ impl Element {
     pub(crate) fn is_html(&self) -> bool {
         self.inner().is_html
     }
+
+    // /// Unsafe shenanigans. Returns a mutable reference to the base of the document in which this element is defined.
+    // unsafe fn document_mut_ref(&self) -> &mut DocumentBase {
+    //     &mut *((*self.inner().node.inner.as_ptr())
+    //         .owner_document
+    //         .as_mut()
+    //         .unwrap()
+    //         .inner
+    //         .upgrade()
+    //         .unwrap()
+    //         .as_ptr())
+    // }
 }
 
-impl PartialEq for Element {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.inner_ref, &other.inner_ref)
-    }
-}
 impl AsEventTarget for Element {
     fn cast(&self) -> &crate::EventTarget {
         AsEventTarget::cast(&self.inner().node)
@@ -95,7 +137,7 @@ impl AsNode for Element {
                 node: self.inner().node.clone_node(deep),
                 is_html: self.inner().is_html,
                 attributes: None,
-                tagname: self.inner().tagname.clone(),
+                tag: self.inner().tag.clone(),
             })),
         };
         element.inner().attributes = Some(NamedNodeMap {
@@ -385,7 +427,7 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     fn tag_name(&self) -> String {
         let element = AsElement::cast(self);
         if element.is_html() {
-            element.inner().tagname.to_uppercase()
+            element.inner().tag.to_uppercase()
         } else {
             todo!()
         }
@@ -406,18 +448,32 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     fn closest(&self, selector: &str) -> Option<Element> {
         todo!()
     }
-    /// Returns the value of a specified attribute on the element.
+    /// Returns the value of a specified attribute on the element, or None if the attribute does not exist.
     ///
     /// MDN Reference: [`Element.getAttribute()`](https://developer.mozilla.org/en-US/docs/Web/API/Element/getAttribute).
+    ///
+    /// # Example
+    /// ```
+    /// use dom::{Document, AsElement};
+    ///
+    /// let document = Document::new();
+    /// let mut element = document.create_element("img");
+    ///
+    /// element.set_attribute("src", "http://examples.com/images/ex.png");
+    ///
+    /// assert_eq!(element.get_attribute("src"), Some("http://examples.com/images/ex.png"));
+    ///
+    /// ```
     fn get_attribute(&self, qualified_name: &str) -> Option<&str> {
-        if matches!(AsElement::cast(self).inner().tagname, Tag::Script) && qualified_name == "nonce"
-        {
+        let element = AsElement::cast(self);
+        if matches!(element.inner().tag, Tag::Script) && qualified_name == "nonce" {
             return Some("");
         }
         let mut qualified_name = qualified_name;
         let mut lowercased_opt = None;
 
-        if AsElement::cast(self).is_html()
+        if element.is_html()
+            && self.owner_document().unwrap().is_html_document()
             && qualified_name.chars().any(|char| !char.is_lowercase())
         {
             lowercased_opt = Some(qualified_name.to_lowercase());
@@ -496,21 +552,53 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     fn get_client_rects(&self) -> DOMRectList {
         todo!()
     }
-    /// Returns a collection of elements that have the given class names, from within this element.
+    /// Returns the elements that have the given class names, from within this element.
     ///
     /// MDN Reference: [`Element.getElementsByClassName()`](https://developer.mozilla.org/docs/Web/API/Element/getElementsByClassName)
+    /// # Example
+    /// ```
+    /// use dom::{Document, AsParentNode, AsChildNode, AsElement};
+    ///
+    /// let document = Document::new();
+    /// let mut div = document.create_element("div");
+    ///
+    /// let mut button = document.create_element("button");
+    /// button.set_class_name("red-button");
+    ///
+    /// let mut span = document.create_element("span");
+    /// span.set_class_name("text");
+    ///
+    /// div.append(&mut button);
+    /// div.append(&mut span);
+    ///
+    /// let collection = div.get_elements_by_class_name("red-button");
+    /// assert_eq!(collection.item(0).unwrap(), &button);
+    ///
+    /// // Changes in the DOM are reflected in the collection.
+    ///
+    /// assert_eq!(collection.len(), 1);
+    /// let mut second_button = document.create_element("button");
+    /// second_button.set_class_name("red-button");
+    /// div.append(&mut second_button);
+    ///
+    /// assert_eq!(collection.len(), 2);
+    ///
+    /// button.remove(); second_button.remove();
+    ///
+    /// assert_eq!(collection.len(), 0);
+    /// ```
+    ///
     fn get_elements_by_class_name(&self, class_names: &str) -> HTMLCollectionOf<Element> {
-        let mut items = vec![];
-        for child in self.children().items {
-            if class_names
-                .split(' ')
-                .all(|classname| child.class_list().contains(classname))
-            {
-                items.push(child.clone_ref())
+        let mut document = self.owner_document().unwrap();
+        unsafe {
+            HTMLCollectionOf {
+                collection: document
+                    .lookup_class_collection(AsElement::cast(self), class_names)
+                    .unwrap_or(
+                        document.add_live_class_collection(AsElement::cast(self), class_names),
+                    ),
             }
-            items.append(&mut child.get_elements_by_class_name(class_names).items)
         }
-        HTMLCollectionOf { items }
     }
     /// Returns a collection of elements that have the given tag, from within this element.
     ///

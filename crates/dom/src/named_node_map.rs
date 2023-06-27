@@ -7,6 +7,7 @@ use std::{
 use crate::{Attr, ElementBase};
 
 /// A collection of Attr objects. Objects inside a NamedNodeMap are not in any particular order, unlike NodeList, although they may be accessed by an index as in an array.
+#[derive(Debug)]
 pub struct NamedNodeMap {
     pub(crate) owner_element: Weak<RefCell<ElementBase>>,
     pub(crate) items: Vec<Attr>,
