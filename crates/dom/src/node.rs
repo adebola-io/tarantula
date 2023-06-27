@@ -19,17 +19,6 @@ pub(crate) struct NodeBase {
     pub parent: Option<(WeakNodeRef, usize)>,
     pub children: Vec<ChildNode>,
 }
-impl NodeBase {
-    pub fn new() -> Self {
-        Self {
-            node_type: MISC_NODE,
-            event_target: EventTarget::new(),
-            parent: None,
-            owner_document: None,
-            children: vec![],
-        }
-    }
-}
 impl std::fmt::Debug for NodeBase {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Node")
@@ -72,11 +61,6 @@ impl<T: AsNode> PartialEq<T> for Node {
 }
 
 impl Node {
-    pub fn new() -> Self {
-        Self {
-            inner: Rc::new(RefCell::new(NodeBase::new())),
-        }
-    }
     /// Returns the position of self in its parent, if it has one.
     fn index(&self) -> Option<usize> {
         self.inner.borrow().parent.as_ref().map(|tuple| tuple.1)
@@ -525,10 +509,11 @@ pub trait AsNode: AsEventTarget {
     /// - Returns a [`HierarchyRequestError`] DOMException if the constraints of the node tree are violated.
     /// # Example
     /// ```rust
-    /// use dom::{Node, AsNode};
+    /// use dom::{Document, AsNode};
     ///
-    /// let mut node = Node::new();
-    /// let mut child = Node::new();
+    /// let document = Document::new();
+    /// let mut node = document.create_element("div");
+    /// let mut child = document.create_element("span");
     /// node.append_child(&mut child).unwrap();
     ///
     /// assert_eq!(node.first_child().unwrap(), &child)
@@ -545,9 +530,10 @@ pub trait AsNode: AsEventTarget {
     /// Event listeners are not cloned.
     /// # Example
     /// ```
-    /// use dom::{Node, AsNode};
+    /// use dom::{Document, AsNode};
     ///
-    /// let mut node = Node::new();
+    /// let document = Document::new();
+    /// let node = document.create_element("div");
     /// assert!(!node.is_same_node(&node.clone_node(false)));
     /// ```
     fn clone_node(&self, deep: bool) -> Self;
@@ -558,10 +544,11 @@ pub trait AsNode: AsEventTarget {
     /// Returns true if other is an inclusive descendant of node, and false otherwise.
     /// # Example
     /// ```
-    /// use dom::{Node, AsNode};
+    /// use dom::{Document, AsNode};
     ///
-    /// let mut node1 = Node::new();
-    /// let mut node2 = Node::new();
+    /// let document = Document::new();
+    /// let mut node1 = document.create_element("div");
+    /// let mut node2 = document.create_element("div");
     /// node1.append_child(&mut node2);
     ///
     /// assert!(node1.contains(&node2));
@@ -587,11 +574,12 @@ pub trait AsNode: AsEventTarget {
     /// MDN Reference: [`Node.hasChildNodes()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/hasChildNodes)
     /// # Example
     /// ```
-    /// use dom::{Node, AsNode};
+    /// use dom::{Document, AsNode};
     ///
-    /// let mut node = Node::new();
+    /// let document = Document::new();
+    /// let mut node = document.create_element("div");
     /// assert!(!node.has_child_nodes());
-    /// let mut child = Node::new();
+    /// let mut child = document.create_element("div");
     /// node.append_child(&mut child);
     /// assert!(node.has_child_nodes());
     /// ```
@@ -605,13 +593,14 @@ pub trait AsNode: AsEventTarget {
     /// - Returns a [`HierarchyRequestError`] DOMException if the constraints of the node tree are violated.
     /// # Example
     /// ```
-    /// use dom::{Node, AsNode};
+    /// use dom::{Document, AsNode};
     ///
-    /// let mut parent = Node::new();
-    /// let mut reference_child = Node::new();
+    /// let document = Document::new();
+    /// let mut parent = document.create_element("div");
+    /// let mut reference_child = document.create_element("div");
     /// parent.append_child(&mut reference_child).unwrap();
     ///
-    /// let mut new_node = Node::new();
+    /// let mut new_node = document.create_element("div");
     /// parent.insert_before(&mut new_node, Some(&mut reference_child)).unwrap();
     ///
     /// assert_eq!(parent.first_child().unwrap(), &new_node);
@@ -640,9 +629,11 @@ pub trait AsNode: AsEventTarget {
     /// MDN Reference: [`Node.isEqualNode()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/isEqualNode)
     /// # Example
     /// ```
-    /// use dom::{Node, AsNode};
-    /// let node1 = Node::new();
-    /// let node2 = Node::new();
+    /// use dom::{Document, AsNode};
+    ///
+    /// let document = Document::new();
+    /// let node1 = document.create_element("div");
+    /// let node2 = document.create_element("div");
     ///
     /// assert!(node1.is_equal_node(&node2));
     /// ```
@@ -656,10 +647,11 @@ pub trait AsNode: AsEventTarget {
     /// MDN Reference: [`Node.isSameNode()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/isSameNode)
     /// # Example
     /// ```
-    /// use dom::{AsNode, Node};
+    /// use dom::{Document, AsNode};
     ///
-    /// let mut parent = Node::new();
-    /// let mut child = Node::new();
+    /// let document = Document::new();
+    /// let mut parent = document.create_element("div");
+    /// let mut child = document.create_element("div");
     /// parent.append_child(&mut child);
     ///
     /// assert!(parent.first_child().unwrap().is_same_node(&child));
@@ -690,10 +682,11 @@ pub trait AsNode: AsEventTarget {
     /// Returns an error if the node to remove is not a child of this node.
     /// # Example
     /// ```
-    /// use dom::{AsNode, Node};
+    /// use dom::{Document, AsNode};
     ///
-    /// let mut parent = Node::new();
-    /// let mut child = Node::new();
+    /// let document = Document::new();
+    /// let mut parent = document.create_element("div");
+    /// let mut child = document.create_element("div");
     /// parent.append_child(&mut child).unwrap();
     ///
     /// assert!(parent.first_child().unwrap().is_same_node(&child));
@@ -716,13 +709,14 @@ pub trait AsNode: AsEventTarget {
     /// Returns an error if the node to replace is not a child of this node, or the addtion of the new node violates the constraints of the node tree.
     /// # Example
     /// ```
-    /// use dom::{AsNode, Node};
-    /// let mut parent = Node::new();
+    /// use dom::{Document, AsNode};
     ///
-    /// let mut child1 = Node::new();
+    /// let document = Document::new();
+    /// let mut parent = document.create_element("div");
+    /// let mut child1 = document.create_element("div");
     /// parent.append_child(&mut child1).unwrap();
     ///
-    /// let mut child2 = Node::new();
+    /// let mut child2 = document.create_element("div");
     /// parent.replace_child(&mut child2, &mut child1).unwrap();
     ///
     /// assert!(child1.parent_node().is_none());
@@ -1103,19 +1097,13 @@ mod helpers {
 
 #[cfg(test)]
 mod tests {
-    use crate::{AsNode, Node, NodeBase};
-
-    #[test]
-    fn node_size() {
-        let node = NodeBase::new();
-        println!("{:?}", std::mem::size_of_val(&node));
-    }
-
+    use crate::{AsNode, Document, Node, NodeBase};
     #[test]
     fn parent_child_node_check() {
-        let mut parent = Node::new();
-        let mut child = Node::new();
-        let mut grandchild = Node::new();
+        let document = Document::new();
+        let mut parent = document.create_element("div");
+        let mut child = document.create_element("span");
+        let mut grandchild = document.create_element("p");
         parent.append_child(&mut child).unwrap();
         parent
             .first_child_mut()
@@ -1138,10 +1126,11 @@ mod tests {
 
     #[test]
     fn sibling_node_check() {
-        let mut parent = Node::new();
-        let mut child1 = Node::new();
-        let mut child2 = Node::new();
-        let mut child3 = Node::new();
+        let document = Document::new();
+        let mut parent = document.create_element("div");
+        let mut child1 = document.create_element("div");
+        let mut child2 = document.create_element("div");
+        let mut child3 = document.create_element("div");
         parent.append_child(&mut child1).unwrap();
         parent.append_child(&mut child2).unwrap();
         parent.append_child(&mut child3).unwrap();
@@ -1154,16 +1143,13 @@ mod tests {
 
     #[test]
     fn equality_node_check() {
-        let node1 = Node::new();
-        let node2 = Node::new();
-        let node1clone = node1.clone();
+        let document = Document::new();
+        let node1 = document.create_element("div");
+        let node2 = document.create_element("div");
+        let node1clone = node1.clone_ref();
 
         assert!(node1.is_equal_node(&node2));
         assert!(node1.is_same_node(&node1clone));
         assert!(!node1.is_same_node(&node2));
-
-        node1.inner.borrow_mut().node_type = 1;
-
-        assert!(!node1.is_equal_node(&node2));
     }
 }

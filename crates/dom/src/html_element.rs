@@ -36,6 +36,12 @@ impl HTMLElement {
             })),
         }
     }
+
+    pub fn clone_ref(&self) -> HTMLElement {
+        HTMLElement {
+            inner: self.inner.clone(),
+        }
+    }
 }
 
 impl AsElement for HTMLElement {
@@ -71,7 +77,11 @@ impl AsNode for HTMLElement {
     }
 
     fn clone_node(&self, deep: bool) -> Self {
-        todo!()
+        HTMLElement {
+            inner: Rc::new(RefCell::new(HTMLElementBase {
+                element: self.inner().element.clone_node(deep),
+            })),
+        }
     }
 }
 
