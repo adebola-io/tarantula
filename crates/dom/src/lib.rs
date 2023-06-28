@@ -30,7 +30,7 @@ pub use element::{
 pub use event::{AsEvent, DOMHighResTimeStamp, Event};
 pub use event_target::{AsEventTarget, EventTarget};
 pub use html_collection::{HTMLCollection, HTMLCollectionOf};
-pub use html_element::{AsHTMLElement, HTMLDivElement, HTMLElement};
+pub use html_element::{AsHTMLElement, HTMLAnchorElement, HTMLDivElement, HTMLElement};
 pub use inner_html::*;
 pub use named_node_map::*;
 pub use node::{
