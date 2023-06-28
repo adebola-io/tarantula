@@ -2,7 +2,9 @@
 
 This (experimental) project hopes be a (somewhat) faithful implementation of the [WHATWG Document Object Model](https://dom.spec.whatwg.org/) in Rust. 
 
-The purpose is to see how possible it is to wrangle the DOM out of Javascript and squeeze it into a Rust API. The API *will* diverge from the specification in places where there is no feasible implementation.
+The purpose is to see how possible it is to wrangle the DOM out of Javascript and squeeze it into a Rust API, possibly for GUI clients or server-side rendering, who knows.
+
+Because of the differences in the languages, The API **will** diverge from the specification in situations where there is no feasible implementation. A list of all concessions and compromises so far can be seen [here](http://link-to-doc-file).
 
 ## Theoretical Usage
 
