@@ -9,14 +9,17 @@ Because of the differences in the languages, The API **will** diverge from the s
 ## Theoretical Usage
 
 ```rust
-use tarantula_dom::{Window, AsElement};
+use tarantula_dom::prelude::*;
 
 fn main() {
-   Window::create_instance(|window| {
+   let html = std::fs::read_to_string("index.html");
+
+   Window::instance(&html,|window| {
       let mut document = window.document();
 
       let mut element = document.create_element("div");
       element.set_inner_text("Hello, there!");
+      element.style_mut().set_property("color", "green");
 
       document.body_mut().append(&mut element);
    });
