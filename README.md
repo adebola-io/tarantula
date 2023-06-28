@@ -12,9 +12,10 @@ Because of the differences in the languages, The API **will** diverge from the s
 use tarantula::prelude::*;
 
 fn main() {
-   let html = std::fs::read_to_string("index.html");
+   let mut window = Window::from_file("index.html", None).unwrap();
 
-   let window = Window::instance(&html).unwrap();
+   window.open();
+  
    let mut document = window.document();
 
    let mut element = document.create_element("div");
