@@ -5,20 +5,21 @@ use std::{
 };
 
 use crate::{
-    AsElement, AsNode, Attr, Element, HTMLElement, LiveCollection, LiveCollectionType, Node,
-    NodeBase, Tag,
+    element::ElementBase,
+    html_collection::{LiveCollection, LiveCollectionType},
+    node::NodeBase,
+    AsElement, AsHTMLElement, AsNode, Attr, Element, HTMLElement, Node, Tag,
 };
 
 pub(crate) struct DocumentBase {
     pub url: String,
-    node_to_element_map: RefCell<HashMap<*mut NodeBase, Element>>,
+    node_to_element_map: RefCell<HashMap<*mut NodeBase, Weak<RefCell<ElementBase>>>>,
     live_collections: Vec<Rc<RefCell<LiveCollection<Element>>>>,
 }
 
 impl DocumentBase {
     /// Refresh the document.
     pub(crate) fn refresh(&mut self, target: &Element) {
-        println!("Refreshing...");
         self.refresh_collections(target);
     }
 
@@ -82,18 +83,22 @@ impl Document {
         let weak_ref = WeakDocumentRef {
             inner: Rc::downgrade(&self.inner),
         };
-        let element = HTMLElement::in_document(tagname, weak_ref);
+        let html_element = HTMLElement::in_document(tagname, weak_ref);
         self.associate_node_with_element(
-            AsNode::cast(&element).get_base_ptr(),
-            AsElement::cast(&element).clone_ref(),
+            AsNode::cast(&html_element).get_base_ptr(),
+            AsElement::cast(&html_element).as_weak_ref(),
         );
-        element
+        html_element
     }
 
     pub(crate) fn is_html_document(&self) -> bool {
         true
     }
-    pub(crate) fn associate_node_with_element(&self, node_base: *mut NodeBase, element: Element) {
+    pub(crate) fn associate_node_with_element(
+        &self,
+        node_base: *mut NodeBase,
+        element: Weak<RefCell<ElementBase>>,
+    ) {
         self.inner()
             .node_to_element_map
             .borrow_mut()
@@ -101,12 +106,17 @@ impl Document {
     }
 
     pub(crate) fn lookup_node(&self, node_base: *mut NodeBase) -> Element {
-        self.inner()
-            .node_to_element_map
-            .borrow_mut()
-            .get(&node_base)
-            .expect("DOMLookupError: Attempted to retrieve node that does not exist in document.")
-            .clone_ref()
+        Element::with_base(
+            self.inner()
+                .node_to_element_map
+                .borrow_mut()
+                .get(&node_base)
+                .expect(
+                    "DOMLookupError: Attempted to retrieve node that does not exist in document.",
+                )
+                .upgrade()
+                .expect("Cannot retrieve element that no longer exists."),
+        )
     }
 
     /// Find a live collection in the document with the parameters given.

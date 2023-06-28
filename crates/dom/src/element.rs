@@ -1,8 +1,12 @@
-use std::{cell::RefCell, mem::ManuallyDrop, rc::Rc};
+use std::{
+    cell::RefCell,
+    mem::ManuallyDrop,
+    rc::{Rc, Weak},
+};
 
 use crate::{
-    dom_token_list::ListType, AsChildNode, AsEventTarget, AsNode, AsParentNode, Attr, DOMException,
-    DOMTokenList, DocumentBase, HTMLCollection, HTMLCollectionOf, InnerHtml, LiveCollectionType,
+    document::DocumentBase, dom_token_list::ListType, AsChildNode, AsEventTarget, AsNode,
+    AsParentNode, Attr, DOMException, DOMTokenList, HTMLCollection, HTMLCollectionOf, InnerHtml,
     MutDOMTokenList, NamedNodeMap, Node, Tag,
 };
 
@@ -20,10 +24,10 @@ pub enum NameSpaceUri {
 }
 
 #[derive(Debug)]
-pub(crate) struct ElementBase {
+pub(super) struct ElementBase {
     attributes: Option<NamedNodeMap>,
     node: Node,
-    tag: Tag,
+    pub tag: Tag,
     is_html: bool,
 }
 
@@ -78,7 +82,7 @@ impl Element {
     pub(crate) fn in_document(
         tagname: &str,
         is_html: bool,
-        weak_ref: crate::WeakDocumentRef,
+        weak_ref: crate::document::WeakDocumentRef,
     ) -> Element {
         let element = Self {
             inner_ref: Rc::new(RefCell::new(ElementBase {
@@ -97,6 +101,15 @@ impl Element {
 
     pub(crate) fn is_html(&self) -> bool {
         self.inner().is_html
+    }
+
+    /// Create an element from a base.
+    pub(crate) fn with_base(inner_ref: Rc<RefCell<ElementBase>>) -> Element {
+        Self { inner_ref }
+    }
+
+    pub(crate) fn as_weak_ref(&self) -> Weak<RefCell<ElementBase>> {
+        Rc::downgrade(&self.inner_ref)
     }
 
     // /// Unsafe shenanigans. Returns a mutable reference to the base of the document in which this element is defined.
