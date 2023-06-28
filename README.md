@@ -14,14 +14,13 @@ use tarantula::prelude::*;
 fn main() {
    let html = std::fs::read_to_string("index.html");
 
-   Window::instance(&html,|window| {
-      let mut document = window.document();
+   let window = Window::instance(&html).unwrap();
+   let mut document = window.document();
 
-      let mut element = document.create_element("div");
-      element.set_inner_text("Hello, there!");
-      element.style_mut().set_property("color", "green");
+   let mut element = document.create_element("div");
+   element.set_inner_text("Hello, there!");
+   element.style_mut().set_property("color", "green");
 
-      document.body_mut().append(&mut element);
-   });
+   document.body_mut().append(&mut element);
 }
 ```
