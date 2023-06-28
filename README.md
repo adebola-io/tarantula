@@ -18,7 +18,7 @@ fn main() {
       let mut element = document.create_element("div");
       element.set_inner_text("Hello, there!");
 
-      document.body_mut().append(element);
+      document.body_mut().append(&mut element);
    });
 }
 ```
