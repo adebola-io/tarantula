@@ -1,8 +1,8 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
-use crate::AddEventListenerOptionsOrBoolean;
+use crate::{event::EventType, AddEventListenerOptionsOrBoolean};
 
-use super::{Event, EventType};
+use super::Event;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct EventListenerObject;

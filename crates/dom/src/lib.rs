@@ -18,19 +18,24 @@ mod others;
 mod tag;
 
 pub use animatable::*;
-pub use attr::*;
-pub use document::*;
+pub use attr::Attr;
+pub use document::Document;
 pub use document_type::*;
 pub use dom_token_list::{DOMTokenList, MutDOMTokenList};
 pub use domexception::*;
-pub use element::*;
-pub use event::*;
-pub use event_target::*;
-pub use html_collection::*;
-pub use html_element::*;
+pub use element::{
+    AsElement, CheckVisibilityOptions, DOMRect, DOMRectList, Element, FullscreenOptions,
+    InsertPosition, ScrollIntoView, ScrollToOptions, ShadowRoot, ShadowRootInit,
+};
+pub use event::{AsEvent, DOMHighResTimeStamp, Event};
+pub use event_target::{AsEventTarget, EventTarget};
+pub use html_collection::{HTMLCollection, HTMLCollectionOf};
+pub use html_element::{AsHTMLElement, HTMLDivElement, HTMLElement};
 pub use inner_html::*;
 pub use named_node_map::*;
-pub use node::*;
+pub use node::{
+    AsChildNode, AsNode, AsParentNode, ChildNode, GetRootNodeOptions, Node, ParentNode,
+};
 pub use nodelist::*;
 pub use others::*;
 pub use tag::*;

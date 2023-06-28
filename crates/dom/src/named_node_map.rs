@@ -4,7 +4,7 @@ use std::{
     rc::Weak,
 };
 
-use crate::{Attr, ElementBase};
+use crate::{element::ElementBase, Attr};
 
 /// A collection of Attr objects. Objects inside a NamedNodeMap are not in any particular order, unlike NodeList, although they may be accessed by an index as in an array.
 #[derive(Debug)]

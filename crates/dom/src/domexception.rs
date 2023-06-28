@@ -3,6 +3,7 @@ pub enum DOMException {
     HierarchyRequestError(&'static str),
     SyntaxError(&'static str),
     InvalidCharacterError(&'static str),
+    TypeError(&'static str),
 }
 
 impl DOMException {

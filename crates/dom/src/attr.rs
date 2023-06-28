@@ -3,7 +3,9 @@ use std::{
     rc::{Rc, Weak},
 };
 
-use crate::{AsEventTarget, AsNode, Element, ElementBase, Node, WeakDocumentRef};
+use crate::{
+    document::WeakDocumentRef, element::ElementBase, AsEventTarget, AsNode, Element, Node,
+};
 
 /// A DOM element's attribute.
 /// In most DOM methods, you will probably directly retrieve the attribute as a string (e.g., [`Element::get_attribute`], but certain functions (e.g., [`Element::get_attribute_node`] or means of iterating give Attr types.

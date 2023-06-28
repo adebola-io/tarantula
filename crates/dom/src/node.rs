@@ -1,6 +1,6 @@
 use crate::{
-    AsElement, AsEventTarget, DOMException, Document, EventTarget, HTMLCollection, HTMLElement,
-    MutNodeListOf, NodeListOf, WeakDocumentRef,
+    document::WeakDocumentRef, AsElement, AsEventTarget, DOMException, Document, EventTarget,
+    HTMLCollection, HTMLElement, MutNodeListOf, NodeListOf,
 };
 use std::{
     cell::RefCell,
@@ -278,6 +278,23 @@ impl AsNode for Node {
         noderef.inner.borrow_mut().parent = None;
         noderef
     }
+
+    fn node_name(&self) -> String {
+        let node_type = self.node_type();
+        String::from(if node_type == Self::DOCUMENT_NODE {
+            "#document"
+        } else if node_type == Self::CDATA_SECTION_NODE {
+            "#cdata-section"
+        } else if node_type == Self::COMMENT_NODE {
+            "#comment"
+        } else if node_type == Self::DOCUMENT_FRAGMENT_NODE {
+            "#document-fragment"
+        } else if node_type == Self::TEXT_NODE {
+            "#text"
+        } else {
+            unimplemented!("Node name should be implemented by Node-inherited structs.")
+        })
+    }
 }
 
 impl AsEventTarget for Node {
@@ -383,22 +400,7 @@ pub trait AsNode: AsEventTarget {
     /// ```
     /// // Add an example.
     /// ```
-    fn node_name(&self) -> String {
-        let node_type = self.node_type();
-        String::from(if node_type == Self::DOCUMENT_NODE {
-            "#document"
-        } else if node_type == Self::CDATA_SECTION_NODE {
-            "#cdata-section"
-        } else if node_type == Self::COMMENT_NODE {
-            "#comment"
-        } else if node_type == Self::DOCUMENT_FRAGMENT_NODE {
-            "#document-fragment"
-        } else if node_type == Self::TEXT_NODE {
-            "#text"
-        } else {
-            unimplemented!("Node name should be implemented by Node-inherited structs.")
-        })
-    }
+    fn node_name(&self) -> String;
     /// Returns an `u8` representing the type of the node. Possible values are:
     ///
     /// | Name | Value |
@@ -798,6 +800,10 @@ impl AsNode for ParentNode {
             inner: self.inner.clone_node(deep),
         }
     }
+
+    fn node_name(&self) -> String {
+        AsNode::cast(self).node_name()
+    }
 }
 impl AsParentNode for ParentNode {}
 
@@ -913,6 +919,9 @@ impl AsNode for ChildNode {
             inner: self.inner.clone_node(deep),
         }
     }
+    fn node_name(&self) -> String {
+        AsNode::cast(self).node_name()
+    }
 }
 impl AsChildNode for ChildNode {}
 
@@ -977,7 +986,7 @@ pub trait AsChildNode: AsNode {
 mod helpers {
     use std::{cell::RefCell, rc::Rc};
 
-    use crate::{AsNode, ChildNode, DOMException, Node, NodeBase, WeakNodeRef};
+    use crate::{node::NodeBase, node::WeakNodeRef, AsNode, ChildNode, DOMException, Node};
 
     pub fn validate_hierarchy<T: AsNode, U: AsNode>(
         parent: &T,
@@ -1097,11 +1106,11 @@ mod helpers {
 
 #[cfg(test)]
 mod tests {
-    use crate::{AsNode, Document, Node, NodeBase};
+    use crate::{node::NodeBase, AsNode, Document, HTMLElement, Node};
     #[test]
     fn parent_child_node_check() {
         let document = Document::new();
-        let mut parent = document.create_element("div");
+        let mut parent: HTMLElement = document.create_element("div");
         let mut child = document.create_element("span");
         let mut grandchild = document.create_element("p");
         parent.append_child(&mut child).unwrap();

@@ -1,4 +1,4 @@
-use super::EventTargetRef;
+use crate::event_target::EventTargetRef;
 
 #[derive(Eq, Hash, PartialEq, Debug, Clone)]
 pub enum EventType {
@@ -120,7 +120,7 @@ pub enum EventPhase {
 #[doc(hidden)]
 pub(crate) mod internal {
     use super::{DOMHighResTimeStamp, EventPhase, EventType};
-    use crate::EventTargetRef;
+    use crate::event::EventTargetRef;
     pub struct EventInner {
         pub type_: EventType,
         pub bubbles: bool,

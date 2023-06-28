@@ -1,8 +1,13 @@
+mod html_anchor_element;
+mod html_div_element;
+pub use html_anchor_element::*;
+pub use html_div_element::*;
+
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    AsChildNode, AsElement, AsEventTarget, AsNode, AsParentNode, Element, InnerHtml, Node,
-    WeakDocumentRef,
+    document::WeakDocumentRef, AsChildNode, AsElement, AsEventTarget, AsNode, AsParentNode,
+    Element, InnerHtml, Node,
 };
 
 #[derive(Debug)]
@@ -83,6 +88,10 @@ impl AsNode for HTMLElement {
             })),
         }
     }
+
+    fn node_name(&self) -> String {
+        self.tag_name()
+    }
 }
 
 impl AsEventTarget for HTMLElement {
@@ -94,6 +103,10 @@ impl AsEventTarget for HTMLElement {
         AsEventTarget::cast_mut(AsNode::cast_mut(self))
     }
 }
+
+impl AsHTMLElement for HTMLElement {}
+
+pub trait AsHTMLElement: AsElement {}
 
 // #[cfg(test)]
 // mod tests {
