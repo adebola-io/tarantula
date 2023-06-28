@@ -5,7 +5,8 @@ This (experimental) project hopes be a (somewhat) faithful implementation of the
 The purpose is to see how possible it is to wrangle the DOM out of Javascript and squeeze it into a Rust API. The API *will* diverge from the specification in places where there is no feasible implementation.
 
 ## Theoretical Usage
-```
+
+```rust
 use tarantula_dom::{Window, AsElement};
 
 fn main() {
