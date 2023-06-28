@@ -9,7 +9,7 @@ Because of the differences in the languages, The API **will** diverge from the s
 ## Theoretical Usage
 
 ```rust
-use tarantula_dom::prelude::*;
+use tarantula::prelude::*;
 
 fn main() {
    let html = std::fs::read_to_string("index.html");
