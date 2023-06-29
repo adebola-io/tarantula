@@ -44,5 +44,24 @@ element.parent_element()?.class_list().len();
 > Note: All instances of `length` are also now `len`, because that's what the Rust Standard Library uses.
 
 ### Setters and getters
+
+A runoff of the last compromise. Mutable properties on objects are now split into two separate methods: One to set the property, and another to return it.
+
+Ergo,
+```js
+button.id = "hero-button";
+button.className = "bg-black text-white";
+console.log(button.id, button.className);
+```
+
+is transformed to:
+
+```rust
+button.set_id("hero-button");
+button.set_class_name("bg-black text-white");
+println!("{}, {}", button.id(), button.class_name());
+```
+
+
 ### Upcasting and Downcasting
 ### Mutability
