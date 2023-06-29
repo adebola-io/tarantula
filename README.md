@@ -1,5 +1,7 @@
 <h1 align=center>Tarantula</h1>
 
+[![status](https://img.shields.io/badge/status-stable-blue.svg)](https://github.com/adebola-io/tarantula/tree/master)
+
 This (experimental) project hopes be a (somewhat) faithful implementation of the [WHATWG Document Object Model](https://dom.spec.whatwg.org/) in Rust. 
 
 The purpose is to see how possible it is to wrangle the DOM out of Javascript and squeeze it into a Rust API, possibly for GUI clients, who knows.
