@@ -1,6 +1,6 @@
 use crate::{
-    AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode, DOMException,
-    HTMLElement, InnerHtml, Tag,
+    tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
+    DOMException, HTMLElement, InnerHtml,
 };
 
 /// The [`HTMLAnchorElement`] struct represents hyperlink elements and provides special methods (beyond those of the regular [`HTMLElement`]) for manipulating the layout and presentation of such elements.

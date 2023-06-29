@@ -49,7 +49,7 @@ impl<T: AsNode> From<&T> for WeakNodeRef {
 }
 
 /// Node is an interface from which a number of DOM API object types inherit. It allows those types to be treated similarly; for example, inheriting the same set of methods, or being tested in the same way.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Node {
     pub(crate) inner: Rc<RefCell<NodeBase>>,
 }
@@ -235,10 +235,11 @@ impl Node {
     fn update_document(&self) {
         // Refresh DOM.
         if let Some(document) = self.owner_document() {
-            document
-                .inner
-                .borrow_mut()
-                .refresh(&document.lookup_node(self.get_base_ptr()))
+            document.inner.borrow_mut().refresh(
+                &document
+                    .lookup_node(self.get_base_ptr())
+                    .expect("Tried to retrieve a node that does not exist / is not an element."),
+            )
         }
     }
 
@@ -767,7 +768,7 @@ pub trait AsNode: AsEventTarget {
 
 // PARENT NODE.
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct ParentNode {
     inner: Node,
 }
@@ -808,40 +809,33 @@ impl AsNode for ParentNode {
 impl AsParentNode for ParentNode {}
 
 pub trait AsParentNode: AsNode {
+    /// Returns the number of children of this node that are elements.
     fn child_element_count(&self) -> usize {
-        todo!()
+        AsNode::cast(self)
+            .inner
+            .borrow()
+            .children
+            .iter()
+            .filter(|node| node.node_type() == Self::ELEMENT_NODE)
+            .count()
     }
+    /// Returns the children elements of this node.
     fn children(&self) -> HTMLCollection {
         HTMLCollection {
-            items: unsafe { &*AsNode::cast(self).inner.as_ptr() }
-                .children
-                .iter()
-                .map(|child_node| {
-                    let node_base = child_node.inner.inner.as_ptr();
-                    self.owner_document().unwrap().lookup_node(node_base)
-                })
-                .collect(),
+            items: self.child_nodes().items,
         }
     }
     /// Returns the first child that is an element.
     fn first_element_child(&self) {
         todo!()
     }
-    /// Returns the first child that is an element, mutably.
-    fn first_element_child_mut(&mut self) {
-        todo!()
-    }
     /// Returns the last child that is an element.
     fn last_element_child(&self) {
         todo!()
     }
-    /// Returns the last child that is an element, mutably.
-    fn last_element_child_mut(&mut self) {
-        todo!()
-    }
     /// Inserts nodes after the last child of node, while replacing strings in nodes with equivalent Text nodes.
-    /// # Panics
-    /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
+    /// # Errors
+    /// - Returns a `HierarchyRequestError` DOMException if the constraints of the node tree are violated.
     fn append<'a, T: 'a + AsNode>(
         &mut self,
         node: impl Into<&'a mut T>,
@@ -852,8 +846,8 @@ pub trait AsParentNode: AsNode {
         Ok(())
     }
     /// Inserts nodes before the first child of node, while replacing strings in nodes with equivalent Text nodes.
-    /// # Panics
-    /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
+    /// # Errors
+    /// - Returns a `HierarchyRequestError` DOMException if the constraints of the node tree are violated.
     fn prepend<'a, T: 'a + AsNode>(
         &mut self,
         node: impl Into<&'a mut T>,
@@ -873,8 +867,8 @@ pub trait AsParentNode: AsNode {
         unimplemented!()
     }
     // /// Replace all children of node with nodes, while replacing strings in nodes with equivalent Text nodes.
-    // /// # Panics
-    // /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
+    // /// # Errors
+    // /// - Returns a `HierarchyRequestError` DOMException if the constraints of the node tree are violated.
     fn replace_children(&mut self, nodes: Vec<impl AsNode>) {
         todo!()
     }
@@ -903,7 +897,9 @@ impl AsEventTarget for ChildNode {
 impl<T: AsNode> From<&T> for ChildNode {
     fn from(node: &T) -> Self {
         ChildNode {
-            inner: AsNode::cast(node).clone(),
+            inner: Node {
+                inner: AsNode::cast(node).inner.clone(),
+            },
         }
     }
 }
@@ -968,7 +964,7 @@ pub trait AsChildNode: AsNode {
         }
     }
     /// Replaces node with nodes, while replacing strings in nodes with equivalent Text nodes.
-    /// # Panics
+    /// # Errors
     /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
     fn replace_with<'a, T: 'a + AsNode>(
         &mut self,

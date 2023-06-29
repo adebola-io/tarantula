@@ -1,9 +1,11 @@
 use crate::{
-    AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode, DOMException,
-    HTMLElement, InnerHtml, Tag,
+    tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
+    DOMException, HTMLElement, InnerHtml,
 };
 
-/// The [`HTMLDivElement`] interface provides special properties (beyond the regular [`HTMLElement`] interface it also has available to it by inheritance) for manipulating `<div>` elements.
+/// The [`HTMLDivElement`] struct provides special methods (beyond the regular [`HTMLElement`] struct) for manipulating `<div>` elements.
+///
+/// MDN Reference: [`HTMLDivElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLDivElement)
 pub struct HTMLDivElement {
     value: HTMLElement,
 }

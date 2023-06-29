@@ -12,7 +12,7 @@ use crate::{
 
 #[derive(Debug)]
 pub(crate) struct HTMLElementBase {
-    element: Element,
+    pub(crate) element: Element,
 }
 
 /// Any HTML element. Some elements directly implement this interface, while others implement it via an interface that inherits it.
@@ -20,7 +20,21 @@ pub(crate) struct HTMLElementBase {
 /// MDN Reference: [`HTMLElement`](https://developer.mozilla.org/docs/Web/API/HTMLElement)
 #[derive(Debug)]
 pub struct HTMLElement {
-    inner: Rc<RefCell<HTMLElementBase>>,
+    pub(crate) inner: Rc<RefCell<HTMLElementBase>>,
+}
+
+impl Drop for HTMLElement {
+    fn drop(&mut self) {
+        // Disconnect node from document.
+        if self.parent_node().is_none() && Rc::strong_count(&self.inner) == 2 {
+            let mut document = self.owner_document().unwrap();
+
+            document.drop_node(AsNode::cast(self).get_base_ptr());
+            assert!(document
+                .lookup_node(AsNode::cast(self).get_base_ptr())
+                .is_none())
+        }
+    }
 }
 
 impl<T: AsNode> PartialEq<T> for HTMLElement {

@@ -4,7 +4,7 @@
 
 use std::{cell::RefCell, rc::Rc};
 
-use crate::{AsElement, Element, Tag};
+use crate::{tag::Tag, AsElement, AsNode, ChildNode, Element, Node};
 
 pub(crate) enum LiveCollectionType {
     Tag(Tag),
@@ -28,30 +28,38 @@ impl LiveCollection<Element> {
 }
 
 /// A generic collection (array-like object similar to arguments) of elements (in document order) and offers methods and properties for selecting from the list.
-pub struct HTMLCollection {
-    pub(crate) items: Vec<Element>,
+pub struct HTMLCollection<'a> {
+    pub(crate) items: &'a Vec<ChildNode>,
 }
 
-impl HTMLCollection {
+impl<'a> HTMLCollection<'a> {
     /// Retrieves the number of objects in a collection.
     pub fn len(&self) -> usize {
         self.items.len()
     }
     /// Retrieves an object from various collections.
-    pub fn item(&self, index: usize) -> Option<&Element> {
-        self.items.get(index)
-    }
-    /// Retrieves an object from various collections
-    pub fn item_mut(&mut self, index: usize) -> Option<&mut Element> {
-        self.items.get_mut(index)
+    pub fn item(&self, index: usize) -> Option<Element> {
+        let node = self.items.get(index)?;
+        node.owner_document()?
+            .lookup_node(AsNode::cast(node).get_base_ptr())
     }
     /// Retrieves a select object or an object from an options collection.
-    pub fn named_item(&self, name: &str) -> Option<&Element> {
+    pub fn named_item(&self, name: &str) -> Option<Element> {
         todo!()
     }
-    /// Retrieves a select object or an object from an options collection, mutably.
-    pub fn named_item_mut(&mut self, name: &str) -> Option<&mut Element> {
-        todo!()
+}
+impl<'a> IntoIterator for HTMLCollection<'a> {
+    type Item = Element;
+
+    type IntoIter = std::iter::Map<std::slice::Iter<'a, ChildNode>, fn(&'a ChildNode) -> Element>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.items.iter().map(|node| {
+            node.owner_document()
+                .unwrap()
+                .lookup_node(AsNode::cast(node).get_base_ptr())
+                .unwrap()
+        })
     }
 }
 // impl Index<usize> for HtmlCollection {
@@ -77,6 +85,14 @@ impl<T: AsElement> HTMLCollectionOf<T> {
     /// Retrieves an object from various collections.
     pub fn item(&self, index: usize) -> Option<&T> {
         self.items().get(index)
+    }
+    /// Returns an iterator over the elements in the collection.
+    pub fn iter(&self) -> impl Iterator<Item = &T> {
+        self.items().iter()
+    }
+    /// Returns a mutable iterator over the elements in the collection.
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut T> {
+        self.items().iter_mut()
     }
 }
 

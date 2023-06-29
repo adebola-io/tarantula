@@ -5,9 +5,9 @@ use std::{
 };
 
 use crate::{
-    document::DocumentBase, dom_token_list::ListType, AsChildNode, AsEventTarget, AsNode,
+    document::DocumentBase, dom_token_list::ListType, tag::Tag, AsChildNode, AsEventTarget, AsNode,
     AsParentNode, Attr, DOMException, DOMTokenList, HTMLCollection, HTMLCollectionOf, InnerHtml,
-    MutDOMTokenList, NamedNodeMap, Node, Tag,
+    MutDOMTokenList, NamedNodeMap, Node,
 };
 
 pub struct ShadowRoot;
@@ -56,7 +56,7 @@ impl Element {
     /// Search the descendants of this element for elements that have a set of class names.
     pub(crate) fn class_search(&self, class_names: &str) -> Vec<Element> {
         let mut matches = vec![];
-        for child in self.children().items {
+        for child in self.children() {
             if class_names
                 .split(' ')
                 .all(|class_name| child.class_list().contains(class_name))
@@ -70,7 +70,7 @@ impl Element {
     /// Search the descendants of this element for elements that have a tag.
     pub(crate) fn tag_search(&self, tag: &Tag) -> Vec<Element> {
         let mut matches = vec![];
-        for child in self.children().items {
+        for child in self.children() {
             if matches!(&child.inner().tag, tag) {
                 matches.push(child.clone_ref())
             }
@@ -433,10 +433,20 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     fn set_slot(&self, value: &str) {
         todo!()
     }
-    /// Returns a string with the name of the tag for the given element. For example, if the element is an `<img>`, its tag name is "IMG" (for HTML documents;
-    /// it may be cased differently for XML/XHTML documents).
+    /// Returns a string with the name of the tag for the given element.
+    ///
+    /// For example, if the element is an `<img>`, its tag name is "IMG" (for HTML documents; it may be cased differently for XML/XHTML documents).
     ///
     /// MDN Reference: [`Element.tagName`](https://developer.mozilla.org/en-US/docs/Web/API/Element/tagName).
+    /// # Example
+    /// ```
+    /// use dom::{Document, AsElement};
+    ///
+    /// let document = Document::new();
+    /// let element = document.create_element("div");
+    ///
+    /// assert_eq!(element.tag_name(), "DIV");
+    /// ```
     fn tag_name(&self) -> String {
         let element = AsElement::cast(self);
         if element.is_html() {
@@ -617,7 +627,15 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     ///
     /// MDN Reference: [`Element.getElementsByTagName()`](https://developer.mozilla.org/docs/Web/API/Element/getElementsByTagName)
     fn get_elements_by_tag_name(&self, qualified_name: &str) -> HTMLCollectionOf<Element> {
-        todo!()
+        let mut document = self.owner_document().unwrap();
+        let tag = Tag::from(qualified_name);
+        unsafe {
+            HTMLCollectionOf {
+                collection: document
+                    .lookup_tag_collection(AsElement::cast(self), &tag)
+                    .unwrap_or(document.add_live_tag_collection(AsElement::cast(self), &tag)),
+            }
+        }
     }
     fn get_elements_by_tag_name_ns(
         &self,

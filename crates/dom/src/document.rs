@@ -7,14 +7,16 @@ use std::{
 use crate::{
     element::ElementBase,
     html_collection::{LiveCollection, LiveCollectionType},
+    html_element::HTMLElementBase,
     node::NodeBase,
-    AsElement, AsHTMLElement, AsNode, Attr, Element, HTMLElement, Node, Tag,
+    tag::Tag,
+    AsElement, AsHTMLElement, AsNode, Attr, Element, HTMLElement, Node,
 };
 
 pub(crate) struct DocumentBase {
-    pub url: String,
-    node_to_element_map: RefCell<HashMap<*mut NodeBase, Weak<RefCell<ElementBase>>>>,
-    live_collections: Vec<Rc<RefCell<LiveCollection<Element>>>>,
+    url: String,
+    map_html: HashMap<*mut NodeBase, HTMLElement>,
+    live_collections: Vec<Weak<RefCell<LiveCollection<Element>>>>,
 }
 
 impl DocumentBase {
@@ -26,7 +28,7 @@ impl DocumentBase {
     fn refresh_collections(&mut self, target: &Element) {
         self.live_collections
             .iter()
-            .filter(|live_collection| live_collection.borrow().target.contains(target))
+            .filter_map(|live_collection| live_collection.upgrade())
             .for_each(|collection| collection.borrow_mut().update());
     }
 }
@@ -66,7 +68,7 @@ impl Document {
         Self {
             inner: Rc::new(RefCell::new(DocumentBase {
                 url: String::new(),
-                node_to_element_map: RefCell::new(HashMap::new()),
+                map_html: HashMap::new(),
                 live_collections: vec![],
             })),
         }
@@ -86,7 +88,7 @@ impl Document {
         let html_element = HTMLElement::in_document(tagname, weak_ref);
         self.associate_node_with_element(
             AsNode::cast(&html_element).get_base_ptr(),
-            AsElement::cast(&html_element).as_weak_ref(),
+            html_element.clone_ref(),
         );
         html_element
     }
@@ -97,25 +99,21 @@ impl Document {
     pub(crate) fn associate_node_with_element(
         &self,
         node_base: *mut NodeBase,
-        element: Weak<RefCell<ElementBase>>,
+        html_element: HTMLElement,
     ) {
-        self.inner()
-            .node_to_element_map
-            .borrow_mut()
-            .insert(node_base, element);
+        self.inner().map_html.insert(node_base, html_element);
     }
 
-    pub(crate) fn lookup_node(&self, node_base: *mut NodeBase) -> Element {
-        Element::with_base(
+    /// Find an element with a node base.
+    pub(crate) fn lookup_node(&self, node_base: *mut NodeBase) -> Option<Element> {
+        Some(
             self.inner()
-                .node_to_element_map
-                .borrow_mut()
-                .get(&node_base)
-                .expect(
-                    "DOMLookupError: Attempted to retrieve node that does not exist in document.",
-                )
-                .upgrade()
-                .expect("Cannot retrieve element that no longer exists."),
+                .map_html
+                .get(&node_base)?
+                .inner
+                .borrow()
+                .element
+                .clone_ref(),
         )
     }
 
@@ -125,16 +123,22 @@ impl Document {
         target: &Element,
         class_names: &str,
     ) -> Option<Rc<RefCell<LiveCollection<Element>>>> {
-        self.inner()
-            .live_collections
-            .iter()
-            .find(|collection| {
-                matches!(
-                    &collection.borrow().collection_type,
-                    LiveCollectionType::Class(class_name)
-                ) && collection.borrow().target.is_same_node(target)
-            })
-            .map(|collection_ref| collection_ref.clone())
+        self.inner().live_collections.iter().find_map(|collection| {
+            collection
+                .upgrade()
+                .map(|collection_ref| {
+                    if matches!(
+                        &collection_ref.borrow().collection_type,
+                        LiveCollectionType::Class(class_name)
+                    ) && collection_ref.borrow().target.is_same_node(target)
+                    {
+                        Some(collection_ref)
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+        })
     }
 
     pub(crate) fn add_live_class_collection(
@@ -147,13 +151,58 @@ impl Document {
             target: target.clone_ref(),
             items: target.class_search(class_names),
         };
+        let new_collection_ref = Rc::new(RefCell::new(new_collection));
         self.inner()
             .live_collections
-            .push(Rc::new(RefCell::new(new_collection)));
-        self.inner().live_collections.last().unwrap().clone()
+            .push(Rc::downgrade(&new_collection_ref));
+        new_collection_ref
     }
 
     fn inner(&self) -> &mut DocumentBase {
         unsafe { &mut *self.inner.as_ptr() }
+    }
+
+    pub(crate) fn lookup_tag_collection(
+        &self,
+        target: &Element,
+        tag: &Tag,
+    ) -> Option<Rc<RefCell<LiveCollection<Element>>>> {
+        self.inner().live_collections.iter().find_map(|collection| {
+            collection
+                .upgrade()
+                .map(|collection_ref| {
+                    if matches!(
+                        &collection_ref.borrow().collection_type,
+                        LiveCollectionType::Tag(tag)
+                    ) && collection_ref.borrow().target.is_same_node(target)
+                    {
+                        Some(collection_ref)
+                    } else {
+                        None
+                    }
+                })
+                .flatten()
+        })
+    }
+
+    pub(crate) fn add_live_tag_collection(
+        &mut self,
+        target: &Element,
+        tag: &Tag,
+    ) -> Rc<RefCell<LiveCollection<Element>>> {
+        let new_collection = LiveCollection {
+            collection_type: LiveCollectionType::Tag(tag.to_owned()),
+            target: target.clone_ref(),
+            items: target.tag_search(tag),
+        };
+        let new_collection_ref = Rc::new(RefCell::new(new_collection));
+        self.inner()
+            .live_collections
+            .push(Rc::downgrade(&new_collection_ref));
+        new_collection_ref
+    }
+
+    pub(crate) fn drop_node(&mut self, base_ptr: *mut NodeBase) {
+        self.inner().map_html.remove(&base_ptr);
     }
 }

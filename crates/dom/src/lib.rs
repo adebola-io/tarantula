@@ -38,7 +38,14 @@ pub use node::{
 };
 pub use nodelist::*;
 pub use others::*;
-pub use tag::*;
+
+pub type DOMResult = Result<(), DOMException>;
+
+pub mod traits {
+    pub use crate::{
+        AsChildNode, AsElement, AsEvent, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
+    };
+}
 
 // fn test() {
 //     let col = HtmlCollection { items: vec![] };
