@@ -1,4 +1,4 @@
-<h1 align=center>Tarantula</h1>
+# Tarantula 🕷
 
 [![status](https://img.shields.io/badge/status-stable-blue.svg)](https://github.com/adebola-io/tarantula/tree/master)
 
@@ -14,9 +14,13 @@ Because of the differences in the languages, The API **will** diverge from the s
 use tarantula::prelude::*;
 
 fn main() {
-   let mut window = Window::from_file("index.html", None).unwrap();
+   if let Err(e) = Window::instance("index.html", context, None).run() {
+      eprintln!("{}", e);
+      std::process::exit(1);
+   };
+}
 
-   window.open();
+fn context(mut window: Window) -> DOMResult {
   
    let mut document = window.document();
 
@@ -24,6 +28,6 @@ fn main() {
    element.set_inner_text("Hello, there!");
    element.style_mut().set_property("color", "green");
 
-   document.body_mut().append(&mut element);
+   document.body_mut().append(&mut element)?;
 }
 ```
