@@ -14,14 +14,13 @@ Because of the differences in the languages, The API **will** diverge from the s
 use tarantula::prelude::*;
 
 fn main() {
-   if let Err(e) = Window::instance("index.html", context, None).run() {
+   if let Err(e) = Window::new("index.html", context, None).run() {
       eprintln!("{}", e);
       std::process::exit(1);
    };
 }
 
 fn context(mut window: Window) -> DOMResult {
-  
    let mut document = window.document();
 
    let mut element = document.create_element("div");
@@ -29,5 +28,6 @@ fn context(mut window: Window) -> DOMResult {
    element.style_mut().set_property("color", "green");
 
    document.body_mut().append(&mut element)?;
+   Ok(())
 }
 ```
