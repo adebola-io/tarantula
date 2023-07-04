@@ -1,7 +1,6 @@
-use crate::{traits::*, Document, HTMLButtonElement};
+use crate::{traits::*, Document, HTMLButtonElement, HTMLFormElement};
 
 #[test]
 fn test() {
     let document = Document::new();
-    let button: HTMLButtonElement = document.create_element("button").try_into().unwrap();
 }

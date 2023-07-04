@@ -2,11 +2,11 @@ use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
     DOMException, HTMLElement, InnerHtml,
 };
-pub struct HTMLAnchorElement {
+pub struct HTMLFramesetElement {
     value: HTMLElement,
 }
 
-impl AsHTMLElement for HTMLAnchorElement {
+impl AsHTMLElement for HTMLFramesetElement {
     fn cast(&self) -> &HTMLElement {
         &self.value
     }
@@ -15,7 +15,7 @@ impl AsHTMLElement for HTMLAnchorElement {
         &mut self.value
     }
 }
-impl AsElement for HTMLAnchorElement {
+impl AsElement for HTMLFramesetElement {
     fn cast(&self) -> &crate::Element {
         AsElement::cast(&self.value)
     }
@@ -24,7 +24,7 @@ impl AsElement for HTMLAnchorElement {
         AsElement::cast_mut(&mut self.value)
     }
 }
-impl InnerHtml for HTMLAnchorElement {
+impl InnerHtml for HTMLFramesetElement {
     fn inner_html(&self) -> String {
         todo!()
     }
@@ -33,9 +33,9 @@ impl InnerHtml for HTMLAnchorElement {
         todo!()
     }
 }
-impl AsParentNode for HTMLAnchorElement {}
-impl AsChildNode for HTMLAnchorElement {}
-impl AsNode for HTMLAnchorElement {
+impl AsParentNode for HTMLFramesetElement {}
+impl AsChildNode for HTMLFramesetElement {}
+impl AsNode for HTMLFramesetElement {
     fn cast(&self) -> &crate::Node {
         AsNode::cast(&self.value)
     }
@@ -49,17 +49,17 @@ impl AsNode for HTMLAnchorElement {
     }
 
     fn clone_node(&self, deep: bool) -> Self {
-        HTMLAnchorElement {
+        HTMLFramesetElement {
             value: self.value.clone_node(deep),
         }
     }
 }
-impl<T: AsNode> PartialEq<T> for HTMLAnchorElement {
+impl<T: AsNode> PartialEq<T> for HTMLFramesetElement {
     fn eq(&self, other: &T) -> bool {
         AsNode::cast(self) == other
     }
 }
-impl AsEventTarget for HTMLAnchorElement {
+impl AsEventTarget for HTMLFramesetElement {
     fn cast(&self) -> &crate::EventTarget {
         AsEventTarget::cast(&self.value)
     }
@@ -69,15 +69,15 @@ impl AsEventTarget for HTMLAnchorElement {
     }
 }
 
-impl TryFrom<HTMLElement> for HTMLAnchorElement {
+impl TryFrom<HTMLElement> for HTMLFramesetElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
-            Ok(HTMLAnchorElement { value })
+            Ok(HTMLFramesetElement { value })
         } else {
             Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLAnchorElement",
+                "Cannot convert element to an HTMLFramesetElement",
             ))
         }
     }
