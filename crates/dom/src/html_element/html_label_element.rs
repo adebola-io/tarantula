@@ -1,18 +1,31 @@
 use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
-    DOMException, HTMLElement, InnerHtml,
+    DOMException, HTMLElement, HTMLFormElement, InnerHtml,
 };
 
-/// The [`HTMLAnchorElement`] struct represents hyperlink elements and provides special methods (beyond those of the regular [`HTMLElement`]) for manipulating the layout and presentation of such elements.
+/// Gives access to properties specific to `<label>` elements. It inherits methods and properties from the base [`HTMLElement`] struct.
 ///
-/// This struct corresponds to `<a>` elements; not to be confused with `<link>`, which is represented by [`HTMLLinkElement`].
-///
-/// MDN Reference: [`HTMLAnchorElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLAnchorElement)
-pub struct HTMLAnchorElement {
+///  MDN Reference: [`HTMLLabelElement`](https://developer.mozilla.org/docs/Web/API/HTMLLabelElement)
+pub struct HTMLLabelElement {
     value: HTMLElement,
 }
 
-impl AsHTMLElement for HTMLAnchorElement {
+impl HTMLLabelElement {
+    pub fn control(&self) -> Option<HTMLElement> {
+        todo!()
+    }
+    pub fn form(&self) -> Option<HTMLFormElement> {
+        todo!()
+    }
+    pub fn html_for(&self) -> &str {
+        todo!()
+    }
+    pub fn set_html_for(&mut self, value: &str) {
+        todo!()
+    }
+}
+
+impl AsHTMLElement for HTMLLabelElement {
     fn cast(&self) -> &HTMLElement {
         &self.value
     }
@@ -21,7 +34,7 @@ impl AsHTMLElement for HTMLAnchorElement {
         &mut self.value
     }
 }
-impl AsElement for HTMLAnchorElement {
+impl AsElement for HTMLLabelElement {
     fn cast(&self) -> &crate::Element {
         AsElement::cast(&self.value)
     }
@@ -30,7 +43,7 @@ impl AsElement for HTMLAnchorElement {
         AsElement::cast_mut(&mut self.value)
     }
 }
-impl InnerHtml for HTMLAnchorElement {
+impl InnerHtml for HTMLLabelElement {
     fn inner_html(&self) -> String {
         todo!()
     }
@@ -39,9 +52,9 @@ impl InnerHtml for HTMLAnchorElement {
         todo!()
     }
 }
-impl AsParentNode for HTMLAnchorElement {}
-impl AsChildNode for HTMLAnchorElement {}
-impl AsNode for HTMLAnchorElement {
+impl AsParentNode for HTMLLabelElement {}
+impl AsChildNode for HTMLLabelElement {}
+impl AsNode for HTMLLabelElement {
     fn cast(&self) -> &crate::Node {
         AsNode::cast(&self.value)
     }
@@ -55,17 +68,17 @@ impl AsNode for HTMLAnchorElement {
     }
 
     fn clone_node(&self, deep: bool) -> Self {
-        HTMLAnchorElement {
+        HTMLLabelElement {
             value: self.value.clone_node(deep),
         }
     }
 }
-impl<T: AsNode> PartialEq<T> for HTMLAnchorElement {
+impl<T: AsNode> PartialEq<T> for HTMLLabelElement {
     fn eq(&self, other: &T) -> bool {
         AsNode::cast(self) == other
     }
 }
-impl AsEventTarget for HTMLAnchorElement {
+impl AsEventTarget for HTMLLabelElement {
     fn cast(&self) -> &crate::EventTarget {
         AsEventTarget::cast(&self.value)
     }
@@ -75,15 +88,15 @@ impl AsEventTarget for HTMLAnchorElement {
     }
 }
 
-impl TryFrom<HTMLElement> for HTMLAnchorElement {
+impl TryFrom<HTMLElement> for HTMLLabelElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
-        if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
-            Ok(HTMLAnchorElement { value })
+        if matches!(value.inner().element.inner_ref.borrow().tag, Tag::Label) {
+            Ok(HTMLLabelElement { value })
         } else {
             Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLAnchorElement",
+                "Cannot convert element to an HTMLLabelElement",
             ))
         }
     }

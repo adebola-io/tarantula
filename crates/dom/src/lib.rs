@@ -16,6 +16,8 @@ mod node;
 mod nodelist;
 mod others;
 mod tag;
+#[cfg(test)]
+mod test;
 
 pub use animatable::*;
 pub use attr::Attr;
@@ -30,7 +32,10 @@ pub use element::{
 pub use event::{AsEvent, DOMHighResTimeStamp, Event};
 pub use event_target::{AsEventTarget, EventTarget};
 pub use html_collection::{HTMLCollection, HTMLCollectionOf};
-pub use html_element::{AsHTMLElement, HTMLAnchorElement, HTMLDivElement, HTMLElement};
+pub use html_element::{
+    AsHTMLElement, HTMLAnchorElement, HTMLButtonElement, HTMLDivElement, HTMLElement,
+    HTMLFormElement, HTMLLabelElement,
+};
 pub use inner_html::*;
 pub use named_node_map::*;
 pub use node::{

@@ -1,18 +1,27 @@
 mod html_anchor_element;
+mod html_button_element;
 mod html_div_element;
-pub use html_anchor_element::*;
-pub use html_div_element::*;
+mod html_form_element;
+mod html_label_element;
+
+pub use html_anchor_element::HTMLAnchorElement;
+pub use html_button_element::{HTMLButtonElement, ValidityState};
+pub use html_div_element::HTMLDivElement;
+pub use html_form_element::HTMLFormElement;
+pub use html_label_element::HTMLLabelElement;
+use unicode_bidi::{bidi_class, BidiClass};
 
 use std::{cell::RefCell, rc::Rc};
 
 use crate::{
-    document::WeakDocumentRef, AsChildNode, AsElement, AsEventTarget, AsNode, AsParentNode,
-    Element, InnerHtml, Node,
+    document::WeakDocumentRef, tag::Tag, AsChildNode, AsElement, AsEventTarget, AsNode,
+    AsParentNode, Element, InnerHtml, Node,
 };
 
 #[derive(Debug)]
 pub(crate) struct HTMLElementBase {
     pub(crate) element: Element,
+    value: String,
 }
 
 /// Any HTML element. Some elements directly implement this interface, while others implement it via an interface that inherits it.
@@ -30,7 +39,7 @@ impl Drop for HTMLElement {
             let mut document = self.owner_document().unwrap();
 
             document.drop_node(AsNode::cast(self).get_base_ptr());
-            assert!(document
+            debug_assert!(document
                 .lookup_node(AsNode::cast(self).get_base_ptr())
                 .is_none())
         }
@@ -48,10 +57,18 @@ impl HTMLElement {
         unsafe { &mut *self.inner.as_ptr() }
     }
 
+    fn is_document_element(&self) -> bool {
+        if let Some(parent) = self.parent_node() {
+            return parent == self.owner_document().unwrap();
+        }
+        false
+    }
+
     pub(crate) fn in_document(tagname: &str, weak_ref: WeakDocumentRef) -> Self {
         HTMLElement {
             inner: Rc::new(RefCell::new(HTMLElementBase {
                 element: Element::in_document(tagname, true, weak_ref),
+                value: String::new(),
             })),
         }
     }
@@ -99,6 +116,7 @@ impl AsNode for HTMLElement {
         HTMLElement {
             inner: Rc::new(RefCell::new(HTMLElementBase {
                 element: self.inner().element.clone_node(deep),
+                value: String::new(),
             })),
         }
     }
@@ -118,9 +136,73 @@ impl AsEventTarget for HTMLElement {
     }
 }
 
-impl AsHTMLElement for HTMLElement {}
+impl AsHTMLElement for HTMLElement {
+    fn cast(&self) -> &HTMLElement {
+        self
+    }
 
-pub trait AsHTMLElement: AsElement {}
+    fn cast_mut(&mut self) -> &mut HTMLElement {
+        self
+    }
+}
+
+/// This trait defines all the functions pertaining to [`HTMLElement`] or any of its "descendants".
+pub trait AsHTMLElement: AsElement {
+    fn cast(&self) -> &HTMLElement;
+    fn cast_mut(&mut self) -> &mut HTMLElement;
+    // PROPERTIES
+    /// Returns the keystroke which a user can press to jump to this element.
+    ///
+    /// MDN Reference: [HTMLElement.accessKey](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/accessKey)
+    fn access_key(&self) -> &str {
+        self.get_attribute("accesskey").unwrap_or("")
+    }
+    /// Sets the keystroke which a user can press to jump to this element.
+    ///
+    /// MDN Reference: [HTMLElement.accessKey](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/accessKey)
+    fn set_access_key(&mut self, value: &str) {
+        self.set_attribute("accesskey", value);
+        todo!()
+    }
+    /// Returns a string with this element's assigned key.
+    ///
+    /// MDN Reference: [HTMLElement.accessKeyLabel](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/accessKeyLabel)
+    fn access_key_label(&self) -> &str {
+        match self.get_attribute("accesskey") {
+            Some(assigned_access_key) => todo!(),
+            None => "",
+        }
+    }
+    /// Returns the value that controls whether and how text input is automatically capitalized as it is entered by the user.
+    ///
+    /// It returns an empty string if the value has not been set.
+    ///
+    /// MDN Reference: [autocapitalize](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/autocapitalize)
+    fn autocapitalize(&self) -> &str {
+        let state = helpers::get_own_capitalization_hint(self);
+        match state {
+            "default" => "",
+            "none" | "sentences" => state,
+            _ => todo!(),
+        }
+    }
+    /// Sets the value that controls whether and how text input is automatically capitalized as it is entered by the user.
+    ///
+    /// MDN Reference: [autocapitalize](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/autocapitalize)
+    fn set_autocapitalize(&mut self, value: &str) {
+        self.set_attribute("autocapitalize", value);
+        todo!()
+    }
+    /// Returns a value indicating the writing direction of the content in this element.
+    ///
+    /// [MDN Reference](https://developer.mozilla.org/docs/Web/API/HTMLElement/dir)
+    fn dir(&self) -> &str {
+        todo!()
+    }
+    fn set_dir(&mut self, value: &str) {
+        todo!()
+    }
+}
 
 // #[cfg(test)]
 // mod tests {
@@ -134,3 +216,31 @@ pub trait AsHTMLElement: AsElement {}
 //         element.remove();
 //     }
 // }
+
+mod helpers {
+    use crate::{element, AsHTMLElement, HTMLElement, HTMLFormElement};
+
+    pub fn get_own_capitalization_hint<'a>(element: &'a impl AsHTMLElement) -> &'a str {
+        match element.get_attribute("autocapitalize") {
+            Some(value) if value != "" => value,
+            _ => {
+                if is_autocapitalize_inheriting_element(element) {
+                    match form_owner(element) {
+                        Some(form) => get_own_capitalization_hint(form),
+                        _ => "default",
+                    }
+                } else {
+                    "default"
+                }
+            }
+        }
+    }
+
+    pub fn is_autocapitalize_inheriting_element(element: &impl AsHTMLElement) -> bool {
+        todo!()
+    }
+
+    pub fn form_owner<'a>(element: &'a impl AsHTMLElement) -> Option<&'a HTMLElement> {
+        todo!()
+    }
+}

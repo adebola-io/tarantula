@@ -23,7 +23,15 @@ impl HTMLDivElement {
     }
 }
 
-impl AsHTMLElement for HTMLDivElement {}
+impl AsHTMLElement for HTMLDivElement {
+    fn cast(&self) -> &HTMLElement {
+        &self.value
+    }
+
+    fn cast_mut(&mut self) -> &mut HTMLElement {
+        &mut self.value
+    }
+}
 impl AsElement for HTMLDivElement {
     fn cast(&self) -> &crate::Element {
         AsElement::cast(&self.value)

@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 macros = {path="../macros"}
+unicode-bidi = "0.3.13"

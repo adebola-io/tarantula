@@ -482,9 +482,9 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// let document = Document::new();
     /// let mut element = document.create_element("img");
     ///
-    /// element.set_attribute("src", "http://examples.com/images/ex.png");
+    /// element.set_attribute("src", "http://examples.com/img.png");
     ///
-    /// assert_eq!(element.get_attribute("src"), Some("http://examples.com/images/ex.png"));
+    /// assert_eq!(element.get_attribute("src"), Some("http://examples.com/img.png"));
     ///
     /// ```
     fn get_attribute(&self, qualified_name: &str) -> Option<&str> {

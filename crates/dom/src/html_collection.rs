@@ -2,7 +2,7 @@
 
 // use crate::{Element, ElementRef, AsElement};
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, ops::Index, rc::Rc};
 
 use crate::{tag::Tag, AsElement, AsNode, ChildNode, Element, Node};
 
@@ -62,13 +62,6 @@ impl<'a> IntoIterator for HTMLCollection<'a> {
         })
     }
 }
-// impl Index<usize> for HtmlCollection {
-//     type Output = Element;
-
-//     fn index(&self, index: usize) -> &Self::Output {
-//         unsafe { &*(self.items[index].as_ptr()) }
-//     }
-// }
 
 pub struct HTMLCollectionOf<T: AsElement> {
     pub(crate) collection: Rc<RefCell<LiveCollection<T>>>,
@@ -96,14 +89,10 @@ impl<T: AsElement> HTMLCollectionOf<T> {
     }
 }
 
-// impl<'a, T> Index<usize> for HtmlCollectionOf<'a, T>
-// where
-//     T: AsElement + ?Sized,
-// {
-//     type Output = T;
+impl<T: AsElement> Index<usize> for HTMLCollectionOf<T> {
+    type Output = T;
 
-//     fn index(&self, index: usize) -> &Self::Output {
-//         todo!()
-//         // unsafe { &*(self.items[index].as_ptr()) }
-//     }
-// }
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.items()[index]
+    }
+}

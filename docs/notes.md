@@ -25,12 +25,14 @@ println!("{:?}", root_element.get_attribute("lang"));
 ### Object properties
 
 All properties on the DOM objects are now methods, because:
-- Most properties are read-only anyways, like `Element.attributes` or `Document.documentRoot`.
-- It is harder and less efficient to keep redundant references in structs. Nobody likes fighting lifetimes.
-- No way to inherit properties in Rust, so if `Attr.nodeName` and `Node.nodeName` must be two distinct things, despite being essentially the same for an attribute node.
-- Some properties are actually getters and setters, meaning they do more than just assign a value during an assignment operation.
+
+-  Most properties are read-only anyways, like `Element.attributes` or `Document.documentRoot`.
+-  It is harder and less efficient to keep redundant references in structs. Nobody likes fighting lifetimes.
+-  No way to inherit properties in Rust, so if `Attr.nodeName` and `Node.nodeName` must be two distinct things, despite being essentially the same for an attribute node.
+-  Some properties are actually getters and setters, meaning they do more than just assign a value during an assignment operation.
 
 In summary,
+
 ```js
 element.parentElement?.classList.length;
 ```
@@ -48,6 +50,7 @@ element.parent_element()?.class_list().len();
 A runoff of the last compromise. Mutable properties on objects are now split into two separate methods: One to set the property, and another to return it.
 
 Ergo,
+
 ```js
 button.id = "hero-button";
 button.className = "bg-black text-white";
@@ -62,6 +65,6 @@ button.set_class_name("bg-black text-white");
 println!("{}, {}", button.id(), button.class_name());
 ```
 
-
 ### Upcasting and Downcasting
+
 ### Mutability

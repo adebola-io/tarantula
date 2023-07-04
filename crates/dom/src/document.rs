@@ -10,10 +10,12 @@ use crate::{
     html_element::HTMLElementBase,
     node::NodeBase,
     tag::Tag,
-    AsElement, AsHTMLElement, AsNode, Attr, Element, HTMLElement, Node,
+    AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode, Attr, Element, HTMLElement,
+    Node,
 };
 
 pub(crate) struct DocumentBase {
+    document_node: Option<Node>,
     url: String,
     map_html: HashMap<*mut NodeBase, HTMLElement>,
     live_collections: Vec<Weak<RefCell<LiveCollection<Element>>>>,
@@ -46,12 +48,6 @@ pub struct Document {
     pub(crate) inner: Rc<RefCell<DocumentBase>>,
 }
 
-impl PartialEq for Document {
-    fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.inner, &other.inner)
-    }
-}
-
 #[derive(Debug, Clone)]
 pub(crate) struct WeakDocumentRef {
     pub(crate) inner: Weak<RefCell<DocumentBase>>,
@@ -63,15 +59,56 @@ impl PartialEq for WeakDocumentRef {
     }
 }
 
+impl<T: AsNode> PartialEq<T> for Document {
+    fn eq(&self, other: &T) -> bool {
+        self.inner().document_node.as_ref().unwrap() == other
+    }
+}
+
+impl AsParentNode for Document {}
+impl AsNode for Document {
+    fn cast(&self) -> &Node {
+        self.inner().document_node.as_ref().unwrap()
+    }
+
+    fn cast_mut(&mut self) -> &mut Node {
+        self.inner().document_node.as_mut().unwrap()
+    }
+
+    fn node_name(&self) -> String {
+        String::from("#document")
+    }
+
+    fn clone_node(&self, deep: bool) -> Self {
+        todo!()
+    }
+}
+impl AsEventTarget for Document {
+    fn cast(&self) -> &crate::EventTarget {
+        AsEventTarget::cast(AsNode::cast(self))
+    }
+
+    fn cast_mut(&mut self) -> &mut crate::EventTarget {
+        AsEventTarget::cast_mut(AsNode::cast_mut(self))
+    }
+}
+
 impl Document {
     pub fn new() -> Self {
-        Self {
-            inner: Rc::new(RefCell::new(DocumentBase {
-                url: String::new(),
-                map_html: HashMap::new(),
-                live_collections: vec![],
-            })),
-        }
+        let mut base = DocumentBase {
+            document_node: None,
+            url: String::new(),
+            map_html: HashMap::new(),
+            live_collections: vec![],
+        };
+        let document = Self {
+            inner: Rc::new(RefCell::new(base)),
+        };
+        let weak_ref = WeakDocumentRef {
+            inner: Rc::downgrade(&document.inner),
+        };
+        document.inner.borrow_mut().document_node = Some(Node::in_document(9, weak_ref));
+        document
     }
     /// Create an HTML attribute with the specified `local_name`.
     pub fn create_attribute(&self, local_name: &str) -> Attr {

@@ -836,6 +836,19 @@ pub trait AsParentNode: AsNode {
     /// Inserts nodes after the last child of node, while replacing strings in nodes with equivalent Text nodes.
     /// # Errors
     /// - Returns a `HierarchyRequestError` DOMException if the constraints of the node tree are violated.
+    /// # Example
+    /// ```
+    /// use dom::{Document, AsParentNode, AsNode};
+    ///
+    /// let document = Document::new();
+    /// let mut element = document.create_element("div");
+    /// let mut child = document.create_element("div");
+    /// element.append(&mut child);
+    ///
+    /// assert_eq!(child.parent_node().unwrap(), element);
+    /// assert_eq!(element.first_child().unwrap(), &child);
+    ///
+    /// ```
     fn append<'a, T: 'a + AsNode>(
         &mut self,
         node: impl Into<&'a mut T>,
