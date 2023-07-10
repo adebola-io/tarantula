@@ -10,7 +10,7 @@ pub enum EventType {
 }
 
 /// An event which takes place in the DOM.
-pub type Event = dyn AsEvent;
+pub struct Event;
 pub type DOMHighResTimeStamp = usize;
 
 #[allow(deprecated)]

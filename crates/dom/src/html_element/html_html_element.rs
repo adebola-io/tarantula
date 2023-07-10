@@ -6,6 +6,17 @@ pub struct HTMLHtmlElement {
     value: HTMLElement,
 }
 
+impl HTMLHtmlElement {
+    #[deprecated]
+    pub fn version(&self) -> &str {
+        todo!()
+    }
+    #[deprecated]
+    pub fn set_version(&mut self, value: &str) {
+        todo!()
+    }
+}
+
 impl AsHTMLElement for HTMLHtmlElement {
     fn cast(&self) -> &HTMLElement {
         &self.value
@@ -73,12 +84,13 @@ impl TryFrom<HTMLElement> for HTMLHtmlElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLHtmlElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLHtmlElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLHtmlElement"
+            )))
         }
     }
 }

@@ -1,9 +1,54 @@
 use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
-    DOMException, HTMLElement, InnerHtml,
+    DOMException, HTMLCollection, HTMLElement, HTMLFormElement, InnerHtml, ValidityState,
 };
 pub struct HTMLFieldsetElement {
     value: HTMLElement,
+}
+
+impl HTMLFieldsetElement {
+    pub fn disabled(&self) -> bool {
+        todo!()
+    }
+    pub fn set_disabled(&mut self, value: bool) {
+        todo!()
+    }
+    pub fn elements(&self) -> HTMLCollection {
+        todo!()
+    }
+    pub fn form(&self) -> Option<HTMLFormElement> {
+        todo!()
+    }
+    pub fn name(&self) -> &str {
+        todo!()
+    }
+    pub fn set_name(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn r#type(&self) -> &str {
+        todo!()
+    }
+    pub fn validation_message(&self) -> &str {
+        todo!()
+    }
+    pub fn validity(&self) -> ValidityState {
+        todo!()
+    }
+    pub fn will_validate(&self) -> bool {
+        todo!()
+    }
+}
+
+impl HTMLFieldsetElement {
+    pub fn check_validity(&self) -> bool {
+        todo!()
+    }
+    pub fn report_validity(&self) -> bool {
+        todo!()
+    }
+    pub fn set_custom_validity(&mut self, error: &str) {
+        todo!()
+    }
 }
 
 impl AsHTMLElement for HTMLFieldsetElement {
@@ -73,12 +118,13 @@ impl TryFrom<HTMLElement> for HTMLFieldsetElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLFieldsetElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLFieldsetElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLFieldsetElement"
+            )))
         }
     }
 }

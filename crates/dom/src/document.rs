@@ -10,9 +10,11 @@ use crate::{
     html_element::HTMLElementBase,
     node::NodeBase,
     tag::Tag,
-    AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode, Attr, Element, HTMLElement,
-    Node,
+    AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode, Attr, Element,
+    HTMLAnchorElement, HTMLCollection, HTMLCollectionOf, HTMLElement, HTMLOrSVGScriptElement, Node,
 };
+
+pub struct HTMLAllCollection;
 
 pub(crate) struct DocumentBase {
     document_node: Option<Node>,
@@ -110,26 +112,6 @@ impl Document {
         document.inner.borrow_mut().document_node = Some(Node::in_document(9, weak_ref));
         document
     }
-    /// Create an HTML attribute with the specified `local_name`.
-    pub fn create_attribute(&self, local_name: &str) -> Attr {
-        let weak_ref = WeakDocumentRef {
-            inner: Rc::downgrade(&self.inner),
-        };
-        Attr::in_document(local_name, weak_ref)
-    }
-    /// Create an HTML element with the specified `tagname`.
-    pub fn create_element(&self, tagname: &str) -> HTMLElement {
-        let weak_ref = WeakDocumentRef {
-            inner: Rc::downgrade(&self.inner),
-        };
-        let html_element = HTMLElement::in_document(tagname, weak_ref);
-        self.associate_node_with_element(
-            AsNode::cast(&html_element).get_base_ptr(),
-            html_element.clone_ref(),
-        );
-        html_element
-    }
-
     pub(crate) fn is_html_document(&self) -> bool {
         true
     }
@@ -153,7 +135,6 @@ impl Document {
                 .clone_ref(),
         )
     }
-
     /// Find a live collection in the document with the parameters given.
     pub(crate) fn lookup_class_collection(
         &self,
@@ -177,7 +158,6 @@ impl Document {
                 .flatten()
         })
     }
-
     pub(crate) fn add_live_class_collection(
         &mut self,
         target: &Element,
@@ -198,7 +178,6 @@ impl Document {
     fn inner(&self) -> &mut DocumentBase {
         unsafe { &mut *self.inner.as_ptr() }
     }
-
     pub(crate) fn lookup_tag_collection(
         &self,
         target: &Element,
@@ -238,8 +217,92 @@ impl Document {
             .push(Rc::downgrade(&new_collection_ref));
         new_collection_ref
     }
-
     pub(crate) fn drop_node(&mut self, base_ptr: *mut NodeBase) {
         self.inner().map_html.remove(&base_ptr);
+    }
+}
+
+impl Document {
+    /// Returns the URL for the document.
+    ///
+    /// [MDN Reference](https://developer.mozilla.org/docs/Web/API/Document/URL)
+    pub fn url(&self) -> &str {
+        &self.inner().url
+    }
+    /// Returns the color of active links in the document.
+    ///
+    /// [MDN Reference](https://developer.mozilla.org/docs/Web/API/Document/alinkColor)
+    #[deprecated]
+    pub fn a_link_color(&self) -> &str {
+        todo!()
+    }
+    /// Sets the color of active links in the document.
+    ///
+    /// [MDN Reference](https://developer.mozilla.org/docs/Web/API/Document/alinkColor)
+    #[deprecated]
+    pub fn set_a_link_color(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn all(&self) -> HTMLAllCollection {
+        todo!()
+    }
+    #[deprecated]
+    pub fn anchors(&self) -> HTMLCollectionOf<HTMLAnchorElement> {
+        todo!()
+    }
+    pub fn applets(&self) -> HTMLCollection {
+        todo!()
+    }
+    pub fn bg_color(&self) -> &str {
+        todo!()
+    }
+    pub fn set_bg_color(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn body(&self) -> HTMLElement {
+        todo!()
+    }
+    pub fn set_body(&mut self, value: HTMLElement) {
+        todo!()
+    }
+    pub fn character_set(&self) -> &str {
+        todo!()
+    }
+    pub fn charset(&self) -> &str {
+        todo!()
+    }
+    pub fn compat_mode(&self) -> &str {
+        todo!()
+    }
+    pub fn content_type(&self) -> &str {
+        todo!()
+    }
+    pub fn cookie(&self) -> &str {
+        todo!()
+    }
+    pub fn set_cookie(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn current_script(&self) -> HTMLOrSVGScriptElement {
+        todo!()
+    }
+    /// Create an HTML attribute with the specified `local_name`.
+    pub fn create_attribute(&self, local_name: &str) -> Attr {
+        let weak_ref = WeakDocumentRef {
+            inner: Rc::downgrade(&self.inner),
+        };
+        Attr::in_document(local_name, weak_ref)
+    }
+    /// Create an HTML element with the specified `tagname`.
+    pub fn create_element(&self, tagname: &str) -> HTMLElement {
+        let weak_ref = WeakDocumentRef {
+            inner: Rc::downgrade(&self.inner),
+        };
+        let html_element = HTMLElement::in_document(tagname, weak_ref);
+        self.associate_node_with_element(
+            AsNode::cast(&html_element).get_base_ptr(),
+            html_element.clone_ref(),
+        );
+        html_element
     }
 }

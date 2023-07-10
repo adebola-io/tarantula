@@ -6,6 +6,21 @@ pub struct HTMLBaseElement {
     value: HTMLElement,
 }
 
+impl HTMLBaseElement {
+    pub fn href(&self) -> &str {
+        todo!()
+    }
+    pub fn set_href(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn target(&self) -> &str {
+        todo!()
+    }
+    pub fn set_target(&mut self, value: &str) {
+        todo!()
+    }
+}
+
 impl AsHTMLElement for HTMLBaseElement {
     fn cast(&self) -> &HTMLElement {
         &self.value
@@ -73,12 +88,13 @@ impl TryFrom<HTMLElement> for HTMLBaseElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLBaseElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLBaseElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLBaseElement"
+            )))
         }
     }
 }

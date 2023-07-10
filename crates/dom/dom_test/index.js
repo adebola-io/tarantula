@@ -1,1 +1,2 @@
-let button = document.createElement("button");
+let element = document.createElement("area");
+element;

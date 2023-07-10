@@ -94,6 +94,9 @@ impl HTMLFormElement {
     pub fn request_submit(&mut self, submitter: Option<HTMLElement>) {
         todo!()
     }
+    pub fn reset(&mut self) {
+        todo!()
+    }
     pub fn submit(&mut self) {
         todo!()
     }
@@ -103,6 +106,14 @@ impl Index<usize> for HTMLFormElement {
     type Output = Element;
 
     fn index(&self, index: usize) -> &Self::Output {
+        todo!()
+    }
+}
+
+impl Index<&str> for HTMLFormElement {
+    type Output = Element;
+
+    fn index(&self, index: &str) -> &Self::Output {
         todo!()
     }
 }
@@ -174,12 +185,13 @@ impl TryFrom<HTMLElement> for HTMLFormElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::Form) {
             Ok(HTMLFormElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLFormElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLFormElement"
+            )))
         }
     }
 }

@@ -73,12 +73,13 @@ impl TryFrom<HTMLElement> for HTMLOutputElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLOutputElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLOutputElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLOutputElement"
+            )))
         }
     }
 }

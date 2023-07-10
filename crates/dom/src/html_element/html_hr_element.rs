@@ -2,11 +2,45 @@ use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
     DOMException, HTMLElement, InnerHtml,
 };
-pub struct HTMLHrElement {
+pub struct HTMLHRElement {
     value: HTMLElement,
 }
 
-impl AsHTMLElement for HTMLHrElement {
+#[deprecated]
+impl HTMLHRElement {
+    pub fn align(&self) -> &str {
+        todo!()
+    }
+    pub fn set_align(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn color(&self) -> &str {
+        todo!()
+    }
+    pub fn set_color(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn shade(&self) -> bool {
+        todo!()
+    }
+    pub fn set_shade(&mut self, value: bool) {
+        todo!()
+    }
+    pub fn size(&self) -> &str {
+        todo!()
+    }
+    pub fn set_size(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn width(&self) -> &str {
+        todo!()
+    }
+    pub fn set_width(&mut self, value: &str) {
+        todo!()
+    }
+}
+
+impl AsHTMLElement for HTMLHRElement {
     fn cast(&self) -> &HTMLElement {
         &self.value
     }
@@ -15,7 +49,7 @@ impl AsHTMLElement for HTMLHrElement {
         &mut self.value
     }
 }
-impl AsElement for HTMLHrElement {
+impl AsElement for HTMLHRElement {
     fn cast(&self) -> &crate::Element {
         AsElement::cast(&self.value)
     }
@@ -24,7 +58,7 @@ impl AsElement for HTMLHrElement {
         AsElement::cast_mut(&mut self.value)
     }
 }
-impl InnerHtml for HTMLHrElement {
+impl InnerHtml for HTMLHRElement {
     fn inner_html(&self) -> String {
         todo!()
     }
@@ -33,9 +67,9 @@ impl InnerHtml for HTMLHrElement {
         todo!()
     }
 }
-impl AsParentNode for HTMLHrElement {}
-impl AsChildNode for HTMLHrElement {}
-impl AsNode for HTMLHrElement {
+impl AsParentNode for HTMLHRElement {}
+impl AsChildNode for HTMLHRElement {}
+impl AsNode for HTMLHRElement {
     fn cast(&self) -> &crate::Node {
         AsNode::cast(&self.value)
     }
@@ -49,17 +83,17 @@ impl AsNode for HTMLHrElement {
     }
 
     fn clone_node(&self, deep: bool) -> Self {
-        HTMLHrElement {
+        HTMLHRElement {
             value: self.value.clone_node(deep),
         }
     }
 }
-impl<T: AsNode> PartialEq<T> for HTMLHrElement {
+impl<T: AsNode> PartialEq<T> for HTMLHRElement {
     fn eq(&self, other: &T) -> bool {
         AsNode::cast(self) == other
     }
 }
-impl AsEventTarget for HTMLHrElement {
+impl AsEventTarget for HTMLHRElement {
     fn cast(&self) -> &crate::EventTarget {
         AsEventTarget::cast(&self.value)
     }
@@ -69,16 +103,17 @@ impl AsEventTarget for HTMLHrElement {
     }
 }
 
-impl TryFrom<HTMLElement> for HTMLHrElement {
+impl TryFrom<HTMLElement> for HTMLHRElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
-            Ok(HTMLHrElement { value })
+            Ok(HTMLHRElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLHrElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLHrElement"
+            )))
         }
     }
 }

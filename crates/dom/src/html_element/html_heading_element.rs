@@ -6,6 +6,16 @@ pub struct HTMLHeadingElement {
     value: HTMLElement,
 }
 
+#[deprecated]
+impl HTMLHeadingElement {
+    pub fn align(&self) -> &str {
+        todo!()
+    }
+    pub fn set_align(&mut self, value: &str) {
+        todo!()
+    }
+}
+
 impl AsHTMLElement for HTMLHeadingElement {
     fn cast(&self) -> &HTMLElement {
         &self.value
@@ -73,12 +83,13 @@ impl TryFrom<HTMLElement> for HTMLHeadingElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLHeadingElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLHeadingElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLHeadingElement"
+            )))
         }
     }
 }

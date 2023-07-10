@@ -129,9 +129,9 @@ impl Node {
                 if AsNode::cast(reference_node).is_child_of(self) {
                     AsNode::cast(reference_node).index().unwrap()
                 } else {
-                    return Err(DOMException::HierarchyRequestError(
+                    return Err(DOMException::HierarchyRequestError(String::from(
                         "Reference node is not a child of this node",
-                    ));
+                    )));
                 }
             }
             None => 0,
@@ -174,9 +174,9 @@ impl Node {
         node: &'a mut T,
     ) -> Result<&'a mut T, DOMException> {
         if !AsNode::cast(node).is_child_of(self) {
-            return Err(DOMException::HierarchyRequestError(
+            return Err(DOMException::HierarchyRequestError(String::from(
                 "Node to remove is not a child of this node.",
-            ));
+            )));
         }
         let children = self.child_nodes_mut().items;
         let node_ref = AsNode::cast_mut(node);
@@ -200,9 +200,9 @@ impl Node {
     ) -> Result<&'a mut T, DOMException> {
         let old_child_as_node = AsNode::cast_mut(old_child);
         if !old_child_as_node.is_child_of(self) {
-            return Err(DOMException::HierarchyRequestError(
+            return Err(DOMException::HierarchyRequestError(String::from(
                 "Node to be replaced is not a child of this node.",
-            ));
+            )));
         }
 
         helpers::validate_hierarchy(self, new_child)?;
@@ -1003,21 +1003,21 @@ mod helpers {
     ) -> Result<(), DOMException> {
         let parent_is_document = parent.node_type() == Node::DOCUMENT_NODE;
         if !AsNode::cast(parent).is_appendable() {
-            Err(DOMException::HierarchyRequestError(
+            Err(DOMException::HierarchyRequestError(String::from(
                 "Self is not a Document, DocumentFragment or Element.",
-            ))
+            )))
         } else if child.contains(parent) {
-            Err(DOMException::HierarchyRequestError(
+            Err(DOMException::HierarchyRequestError(String::from(
                 "Appending child will lead to DOM cycle.",
-            ))
+            )))
         } else if (child.node_type() == Node::TEXT_NODE) && parent_is_document {
-            Err(DOMException::HierarchyRequestError(
+            Err(DOMException::HierarchyRequestError(String::from(
                 "Nodes of type '#text' may not be inserted inside nodes of type '#document'.",
-            ))
+            )))
         } else if (child.node_type() == Node::DOCUMENT_TYPE_NODE) && !parent_is_document {
-            Err(DOMException::HierarchyRequestError(
+            Err(DOMException::HierarchyRequestError(String::from(
                 "DocumentType must always be direct descendant of Document",
-            ))
+            )))
         } else if child.node_type() == Node::DOCUMENT_FRAGMENT_NODE {
             let parent_has_element_already = parent
                 .child_nodes()
@@ -1028,16 +1028,16 @@ mod helpers {
             for subchild in child.child_nodes() {
                 if subchild.node_type() == Node::ELEMENT_NODE {
                     if parent_is_document && parent_has_element_already {
-                        return Err(DOMException::HierarchyRequestError(
-                            "Only onde document allowed at root.",
-                        ));
+                        return Err(DOMException::HierarchyRequestError(String::from(
+                            "Only one document allowed at root.",
+                        )));
                     }
                     element_count += 1;
                     if element_count > 1 && parent_is_document {
-                        return Err(DOMException::HierarchyRequestError("Nodes of type '#document-fragment' may not be inserted inside nodes of type '#document'"));
+                        return Err(DOMException::HierarchyRequestError(String::from("Nodes of type '#document-fragment' may not be inserted inside nodes of type '#document'")));
                     }
                 } else if (subchild.node_type() == Node::TEXT_NODE) && parent_is_document {
-                    return Err(DOMException::HierarchyRequestError("Nodes of type '#document-fragment' may not be inserted inside nodes of type '#document'"));
+                    return Err(DOMException::HierarchyRequestError(String::from("Nodes of type '#document-fragment' may not be inserted inside nodes of type '#document'")));
                 }
             }
             Ok(())

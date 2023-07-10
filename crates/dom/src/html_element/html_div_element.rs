@@ -18,7 +18,7 @@ impl HTMLDivElement {
     }
     /// Sets a string representing how the elements content are aligned with respect to the surrounding context. Possible values are "left", "right", "justify", and "center".
     #[deprecated]
-    pub fn set_align(&self, value: &str) {
+    pub fn set_align(&mut self, value: &str) {
         todo!()
     }
 }
@@ -90,12 +90,13 @@ impl TryFrom<HTMLElement> for HTMLDivElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::Div) {
             Ok(HTMLDivElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLDivElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLDivElement"
+            )))
         }
     }
 }

@@ -1,3 +1,5 @@
+use crate::HTMLScriptElement;
+
 pub type EventListenerOptions = dyn AsEventListenerOptions;
 
 pub trait AsEventListenerOptions {
@@ -28,3 +30,12 @@ pub enum AddEventListenerOptionsOrBoolean {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AbortSignal;
+
+pub enum HTMLOrSVGScriptElement {
+    None,
+    HTMLScriptElement(HTMLScriptElement),
+    SVGScriptElement,
+}
+pub type BigInteger = [u8];
+
+pub struct TimeRanges;

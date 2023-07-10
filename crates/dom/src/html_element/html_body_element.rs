@@ -2,8 +2,52 @@ use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
     DOMException, HTMLElement, InnerHtml,
 };
+
+/// The [`HTMLBodyElement`] struct provides special methods (beyond the regular [`HTMLElement`] struct) for manipulating `<area>` elements.
+///
+/// MDN Reference: [`HTMLBodyElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLBodyElement).
 pub struct HTMLBodyElement {
     value: HTMLElement,
+}
+
+#[deprecated]
+impl HTMLBodyElement {
+    pub fn a_link(&self) -> &str {
+        todo!()
+    }
+    pub fn set_a_link(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn background(&self) -> &str {
+        todo!()
+    }
+    pub fn set_background(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn bg_color(&self) -> &str {
+        todo!()
+    }
+    pub fn set_bg_color(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn link(&self) -> &str {
+        todo!()
+    }
+    pub fn set_link(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn text(&self) -> &str {
+        todo!()
+    }
+    pub fn set_text(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn v_link(&self) -> &str {
+        todo!()
+    }
+    pub fn set_v_link(&mut self, value: &str) {
+        todo!()
+    }
 }
 
 impl AsHTMLElement for HTMLBodyElement {
@@ -73,12 +117,13 @@ impl TryFrom<HTMLElement> for HTMLBodyElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLBodyElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLBodyElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLBodyElement"
+            )))
         }
     }
 }

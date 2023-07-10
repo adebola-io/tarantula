@@ -68,3 +68,5 @@ println!("{}, {}", button.id(), button.class_name());
 ### Upcasting and Downcasting
 
 ### Mutability
+
+### HTMLCanvasElement

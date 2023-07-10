@@ -2,8 +2,21 @@ use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
     DOMException, HTMLElement, InnerHtml,
 };
+
+#[deprecated]
 pub struct HTMLDirectoryElement {
     value: HTMLElement,
+}
+
+impl HTMLDirectoryElement {
+    #[deprecated]
+    pub fn compact(&self) -> bool {
+        todo!()
+    }
+    #[deprecated]
+    pub fn set_compact(&mut self, value: bool) {
+        todo!()
+    }
 }
 
 impl AsHTMLElement for HTMLDirectoryElement {
@@ -73,12 +86,13 @@ impl TryFrom<HTMLElement> for HTMLDirectoryElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLDirectoryElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLDirectoryElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLDirectoryElement"
+            )))
         }
     }
 }

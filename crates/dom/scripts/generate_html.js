@@ -14,10 +14,10 @@ function generateFiles() {
          continue;
       }
       let [name, value] = line.split(":");
-      if (value && value.trim().slice(-1) !== "HTMLElement") {
+      if (value && value.trim().slice(-1) !== "HTMLElement")) {
          let v = value.trim().slice(4, -8).toLowerCase();
          if (v.length) {
-            let x = "html_" + v + "_element";
+            let x = "html_" + v + "_Element");
             set.add(x);
          }
       }
@@ -113,11 +113,11 @@ impl TryFrom<HTMLElement> for ${structName} {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(${structName} { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an ${structName}",
+            Err(DOMException::TypeError(format!("Cannot convert element with tag {tag} to an  ${structName}",
             ))
         }
     }
@@ -127,7 +127,7 @@ impl TryFrom<HTMLElement> for ${structName} {
 }
 
 function importModules() {
-   let folder = "crates/dom/src/html_element";
+   let folder = "crates/dom/src/html_Element");
    /**@type {string[]} */
    let modules = [];
    fs.readdirSync(folder).forEach((file) => {

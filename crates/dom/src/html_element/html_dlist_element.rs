@@ -2,11 +2,22 @@ use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
     DOMException, HTMLElement, InnerHtml,
 };
-pub struct HTMLDlistElement {
+pub struct HTMLDListElement {
     value: HTMLElement,
 }
 
-impl AsHTMLElement for HTMLDlistElement {
+impl HTMLDListElement {
+    #[deprecated]
+    pub fn compact(&self) -> bool {
+        todo!()
+    }
+    #[deprecated]
+    pub fn set_compact(&mut self, value: bool) {
+        todo!()
+    }
+}
+
+impl AsHTMLElement for HTMLDListElement {
     fn cast(&self) -> &HTMLElement {
         &self.value
     }
@@ -15,7 +26,7 @@ impl AsHTMLElement for HTMLDlistElement {
         &mut self.value
     }
 }
-impl AsElement for HTMLDlistElement {
+impl AsElement for HTMLDListElement {
     fn cast(&self) -> &crate::Element {
         AsElement::cast(&self.value)
     }
@@ -24,7 +35,7 @@ impl AsElement for HTMLDlistElement {
         AsElement::cast_mut(&mut self.value)
     }
 }
-impl InnerHtml for HTMLDlistElement {
+impl InnerHtml for HTMLDListElement {
     fn inner_html(&self) -> String {
         todo!()
     }
@@ -33,9 +44,9 @@ impl InnerHtml for HTMLDlistElement {
         todo!()
     }
 }
-impl AsParentNode for HTMLDlistElement {}
-impl AsChildNode for HTMLDlistElement {}
-impl AsNode for HTMLDlistElement {
+impl AsParentNode for HTMLDListElement {}
+impl AsChildNode for HTMLDListElement {}
+impl AsNode for HTMLDListElement {
     fn cast(&self) -> &crate::Node {
         AsNode::cast(&self.value)
     }
@@ -49,17 +60,17 @@ impl AsNode for HTMLDlistElement {
     }
 
     fn clone_node(&self, deep: bool) -> Self {
-        HTMLDlistElement {
+        HTMLDListElement {
             value: self.value.clone_node(deep),
         }
     }
 }
-impl<T: AsNode> PartialEq<T> for HTMLDlistElement {
+impl<T: AsNode> PartialEq<T> for HTMLDListElement {
     fn eq(&self, other: &T) -> bool {
         AsNode::cast(self) == other
     }
 }
-impl AsEventTarget for HTMLDlistElement {
+impl AsEventTarget for HTMLDListElement {
     fn cast(&self) -> &crate::EventTarget {
         AsEventTarget::cast(&self.value)
     }
@@ -69,16 +80,17 @@ impl AsEventTarget for HTMLDlistElement {
     }
 }
 
-impl TryFrom<HTMLElement> for HTMLDlistElement {
+impl TryFrom<HTMLElement> for HTMLDListElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
-            Ok(HTMLDlistElement { value })
+            Ok(HTMLDListElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLDlistElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLDlistElement"
+            )))
         }
     }
 }

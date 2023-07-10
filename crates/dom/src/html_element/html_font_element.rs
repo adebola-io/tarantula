@@ -2,8 +2,37 @@ use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
     DOMException, HTMLElement, InnerHtml,
 };
+
+#[deprecated]
 pub struct HTMLFontElement {
     value: HTMLElement,
+}
+
+impl HTMLFontElement {
+    #[deprecated]
+    pub fn color(&self) -> &str {
+        todo!()
+    }
+    #[deprecated]
+    pub fn set_color(&mut self, value: &str) {
+        todo!()
+    }
+    #[deprecated]
+    pub fn face(&self) -> &str {
+        todo!()
+    }
+    #[deprecated]
+    pub fn set_face(&mut self, value: &str) {
+        todo!()
+    }
+    #[deprecated]
+    pub fn size(&self) -> &str {
+        todo!()
+    }
+    #[deprecated]
+    pub fn set_size(&mut self, value: &str) {
+        todo!()
+    }
 }
 
 impl AsHTMLElement for HTMLFontElement {
@@ -73,12 +102,13 @@ impl TryFrom<HTMLElement> for HTMLFontElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLFontElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLFontElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLFontElement"
+            )))
         }
     }
 }

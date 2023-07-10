@@ -1,12 +1,79 @@
-
 use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
-    DOMException, HTMLElement, InnerHtml,
+    DOMException, DOMTokenList, HTMLElement, HTMLHyperlinkElementUtils, InnerHtml,
 };
+
+/// The [`HTMLAreaElement`] struct provides special methods (beyond the regular [`HTMLElement`] struct) for manipulating `<area>` elements.
+///
+/// MDN Reference: [`HTMLAreaElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLAreaElement).
 pub struct HTMLAreaElement {
     value: HTMLElement,
 }
 
+// Properties
+impl HTMLAreaElement {
+    pub fn alt(&self) -> &str {
+        todo!()
+    }
+    pub fn set_alt(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn coords(&self) -> &str {
+        todo!()
+    }
+    pub fn set_coords(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn download(&self) -> &str {
+        todo!()
+    }
+    pub fn set_download(&mut self, value: &str) {
+        todo!()
+    }
+    #[deprecated]
+    pub fn no_href(&self) -> bool {
+        todo!()
+    }
+    #[deprecated]
+    pub fn set_no_href(&mut self, value: bool) {
+        todo!()
+    }
+    pub fn ping(&self) -> &str {
+        todo!()
+    }
+    pub fn set_ping(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn referrer_policy(&self) -> &str {
+        todo!()
+    }
+    pub fn set_referrer_policy(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn rel(&self) -> &str {
+        todo!()
+    }
+    pub fn set_rel(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn rel_list(&self) -> DOMTokenList {
+        todo!()
+    }
+    pub fn shape(&self) -> &str {
+        todo!()
+    }
+    pub fn set_shape(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn target(&self) -> &str {
+        todo!()
+    }
+    pub fn set_target(&mut self, value: &str) {
+        todo!()
+    }
+}
+
+impl HTMLHyperlinkElementUtils for HTMLAreaElement {}
 impl AsHTMLElement for HTMLAreaElement {
     fn cast(&self) -> &HTMLElement {
         &self.value
@@ -16,6 +83,7 @@ impl AsHTMLElement for HTMLAreaElement {
         &mut self.value
     }
 }
+
 impl AsElement for HTMLAreaElement {
     fn cast(&self) -> &crate::Element {
         AsElement::cast(&self.value)
@@ -74,12 +142,13 @@ impl TryFrom<HTMLElement> for HTMLAreaElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
-        if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
+        let tag = value.tag();
+        if matches!(value.inner().element.inner_ref.borrow().tag, Tag::Area) {
             Ok(HTMLAreaElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLAreaElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an HTMLAreaElement"
+            )))
         }
     }
 }

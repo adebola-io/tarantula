@@ -1,3 +1,4 @@
+// #[warn(unused)]
 mod html_anchor_element;
 mod html_area_element;
 mod html_audio_element;
@@ -68,19 +69,75 @@ mod html_ulist_element;
 mod html_unknown_element;
 mod html_video_element;
 
-pub use html_anchor_element::HTMLAnchorElement;
-pub use html_button_element::{HTMLButtonElement, ValidityState};
-pub use html_div_element::HTMLDivElement;
-pub use html_form_element::HTMLFormElement;
-pub use html_label_element::HTMLLabelElement;
-use unicode_bidi::{bidi_class, BidiClass};
-
-use std::{cell::RefCell, rc::Rc};
-
 use crate::{
     document::WeakDocumentRef, tag::Tag, AsChildNode, AsElement, AsEventTarget, AsNode,
-    AsParentNode, Element, InnerHtml, Node,
+    AsParentNode, Element, Event, InnerHtml, Node, TimeRanges,
 };
+pub use html_anchor_element::HTMLAnchorElement;
+pub use html_area_element::HTMLAreaElement;
+pub use html_audio_element::HTMLAudioElement;
+pub use html_base_element::HTMLBaseElement;
+pub use html_body_element::HTMLBodyElement;
+pub use html_br_element::HTMLBRElement;
+pub use html_button_element::{HTMLButtonElement, ValidityState};
+pub use html_canvas_element::HTMLCanvasElement;
+pub use html_data_element::HTMLDataElement;
+pub use html_datalist_element::HTMLDatalistElement;
+pub use html_details_element::HTMLDetailsElement;
+pub use html_dialog_element::HTMLDialogElement;
+pub use html_directory_element::HTMLDirectoryElement;
+pub use html_div_element::HTMLDivElement;
+pub use html_dlist_element::HTMLDListElement;
+pub use html_embed_element::HTMLEmbedElement;
+pub use html_fieldset_element::HTMLFieldsetElement;
+pub use html_font_element::HTMLFontElement;
+pub use html_form_element::HTMLFormElement;
+pub use html_frame_element::HTMLFrameElement;
+pub use html_frameset_element::HTMLFramesetElement;
+pub use html_head_element::HTMLHeadElement;
+pub use html_heading_element::HTMLHeadingElement;
+pub use html_hr_element::HTMLHRElement;
+pub use html_html_element::HTMLHtmlElement;
+pub use html_iframe_element::HTMLIframeElement;
+pub use html_image_element::HTMLImageElement;
+pub use html_input_element::HTMLInputElement;
+pub use html_label_element::HTMLLabelElement;
+pub use html_legend_element::HTMLLegendElement;
+pub use html_li_element::HTMLLiElement;
+pub use html_link_element::HTMLLinkElement;
+pub use html_map_element::HTMLMapElement;
+pub use html_marquee_element::HTMLMarqueeElement;
+pub use html_menu_element::HTMLMenuElement;
+pub use html_meter_element::HTMLMeterElement;
+pub use html_mod_element::HTMLModElement;
+pub use html_object_element::HTMLObjectElement;
+pub use html_olist_element::HTMLOlistElement;
+pub use html_optgroup_element::HTMLOptgroupElement;
+pub use html_option_element::HTMLOptionElement;
+pub use html_output_element::HTMLOutputElement;
+pub use html_paragraph_element::HTMLParagraphElement;
+pub use html_quote_element::HTMLQuoteElement;
+pub use html_script_element::HTMLScriptElement;
+pub use html_select_element::HTMLSelectElement;
+pub use html_slot_element::HTMLSlotElement;
+pub use html_source_element::HTMLSourceElement;
+pub use html_span_element::HTMLSpanElement;
+pub use html_style_element::HTMLStyleElement;
+pub use html_table_element::HTMLTableElement;
+pub use html_tablecaption_element::HTMLTablecaptionElement;
+pub use html_tablecell_element::HTMLTablecellElement;
+pub use html_tablecol_element::HTMLTablecolElement;
+pub use html_tablerow_element::HTMLTablerowElement;
+pub use html_tablesection_element::HTMLTablesectionElement;
+pub use html_template_element::HTMLTemplateElement;
+pub use html_textarea_element::HTMLTextareaElement;
+pub use html_time_element::HTMLTimeElement;
+pub use html_title_element::HTMLTitleElement;
+pub use html_ulist_element::HTMLUlistElement;
+pub use html_unknown_element::HTMLUnknownElement;
+pub use html_video_element::HTMLVideoElement;
+use std::{any::Any, cell::RefCell, rc::Rc};
+use unicode_bidi::{bidi_class, BidiClass};
 
 #[derive(Debug)]
 pub(crate) struct HTMLElementBase {
@@ -141,6 +198,10 @@ impl HTMLElement {
         HTMLElement {
             inner: self.inner.clone(),
         }
+    }
+
+    pub(crate) fn tag(&self) -> &Tag {
+        &(unsafe { &*self.inner().element.inner_ref.as_ptr() }).tag
     }
 }
 
@@ -307,4 +368,261 @@ mod helpers {
     pub fn form_owner<'a>(element: &'a impl AsHTMLElement) -> Option<&'a HTMLElement> {
         todo!()
     }
+}
+
+pub trait HTMLHyperlinkElementUtils {
+    fn hash(&self) -> &str {
+        todo!()
+    }
+    fn set_hash(&mut self, value: &str) {
+        todo!()
+    }
+    fn host(&self) -> &str {
+        todo!()
+    }
+    fn set_host(&mut self, value: &str) {
+        todo!()
+    }
+    fn hostname(&self) -> &str {
+        todo!()
+    }
+    fn set_hostname(&mut self, value: &str) {
+        todo!()
+    }
+    fn href(&self) -> &str {
+        todo!()
+    }
+    fn set_href(&mut self, value: &str) {
+        todo!()
+    }
+    fn to_string(&self) -> String {
+        todo!()
+    }
+    fn origin(&self) -> &str {
+        todo!()
+    }
+    fn password(&self) -> &str {
+        todo!()
+    }
+    fn set_password(&mut self, value: &str) {
+        todo!()
+    }
+    fn pathname(&self) -> &str {
+        todo!()
+    }
+    fn set_pathname(&mut self, value: &str) {
+        todo!()
+    }
+    fn port(&self) -> &str {
+        todo!()
+    }
+    fn set_port(&mut self, value: &str) {
+        todo!()
+    }
+    fn protocol(&self) -> &str {
+        todo!()
+    }
+    fn set_protocol(&mut self, value: &str) {
+        todo!()
+    }
+    fn search(&self) -> &str {
+        todo!()
+    }
+    fn set_search(&mut self, value: &str) {
+        todo!()
+    }
+    fn username(&self) -> &str {
+        todo!()
+    }
+    fn set_username(&mut self, value: &str) {
+        todo!()
+    }
+}
+
+pub struct MediaError;
+pub struct MediaKeys;
+pub struct MediaEncryptedEvent;
+pub struct MediaProvider;
+pub struct TextTrack;
+pub struct TextTrackList;
+pub struct TextTrackKind;
+
+pub struct RemotePlayback;
+
+pub struct MediaStream;
+
+pub trait HTMLMediaElement: AsHTMLElement {
+    fn autoplay(&self) -> bool {
+        todo!()
+    }
+    fn set_autoplay(&mut self, value: bool) {
+        todo!()
+    }
+    fn buffered(&self) -> TimeRanges {
+        todo!()
+    }
+    fn controls(&mut self) -> bool {
+        todo!()
+    }
+    fn set_controls(&self, value: bool) {
+        todo!()
+    }
+    fn cross_origin(&self) -> Option<bool> {
+        todo!()
+    }
+    fn set_cross_origin(&mut self, value: Option<bool>) {
+        todo!()
+    }
+    fn current_src(&self) -> &str {
+        todo!()
+    }
+    fn default_muted(&self) -> bool {
+        todo!()
+    }
+    fn set_default_muted(&mut self, value: bool) {
+        todo!()
+    }
+    fn default_playback_rate(&self) -> usize {
+        todo!()
+    }
+    fn set_default_playback_rate(&mut self, value: usize) {
+        todo!()
+    }
+    fn disable_remote_playback(&self) -> bool {
+        todo!()
+    }
+    fn set_disable_remote_playback(&mut self, value: bool) {
+        todo!()
+    }
+    fn duration(&self) -> bool {
+        todo!()
+    }
+    fn ended(&self) -> bool {
+        todo!()
+    }
+    fn error(&self) -> Option<MediaError> {
+        todo!()
+    }
+    fn r#loop(&self) -> bool {
+        todo!()
+    }
+    fn set_loop(&mut self, value: bool) {
+        todo!()
+    }
+    fn media_keys(&self) -> Option<MediaKeys> {
+        todo!()
+    }
+    fn muted(&self) -> bool {
+        todo!()
+    }
+    fn set_muted(&mut self, value: bool) {
+        todo!()
+    }
+    fn network_state(&self) -> usize {
+        todo!()
+    }
+    fn oncrypted(&self) -> &fn(this: Self, ev: MediaEncryptedEvent) {
+        todo!()
+    }
+    fn set_oncrypted(&mut self, value: fn(this: Self, ev: MediaEncryptedEvent)) {
+        todo!()
+    }
+    fn onwaitingforkey(&self) -> &fn(this: Self, ev: Event) -> dyn Any {
+        todo!()
+    }
+    fn set_onwaitingforkey(&mut self, value: fn(this: Self, ev: Event) -> dyn Any) {
+        todo!()
+    }
+    fn paused(&self) -> bool {
+        todo!()
+    }
+    fn playback_rate(&self) -> usize {
+        todo!()
+    }
+    fn set_playback_rate(&mut self, value: usize) {
+        todo!()
+    }
+    fn played(&self) -> TimeRanges {
+        todo!()
+    }
+    fn preload(&self) -> &str {
+        todo!()
+    }
+    fn set_preload(&mut self, value: &str) {
+        todo!()
+    }
+    fn preserves_pitch(&self) -> bool {
+        todo!()
+    }
+    fn set_preserves_pitch(&mut self, value: bool) {
+        todo!()
+    }
+    fn ready_state(&self) -> usize {
+        todo!()
+    }
+    fn remote(&self) -> RemotePlayback {
+        todo!()
+    }
+    fn seekable(&self) -> TimeRanges {
+        todo!()
+    }
+    fn seeking(&self) -> bool {
+        todo!()
+    }
+    fn src(&self) -> &str {
+        todo!()
+    }
+    fn set_src(&mut self, value: &str) {
+        todo!()
+    }
+    fn src_object(&self) -> Option<MediaProvider> {
+        todo!()
+    }
+    fn set_src_object(&mut self, value: Option<MediaProvider>) {
+        todo!()
+    }
+    fn text_tracks(&self) -> TextTrackList {
+        todo!()
+    }
+    fn volume(&self) -> usize {
+        todo!()
+    }
+    fn set_volume(&mut self, value: usize) {
+        todo!()
+    }
+    fn add_text_track(
+        &mut self,
+        kind: TextTrackKind,
+        label: Option<&str>,
+        language: Option<&str>,
+    ) -> &TextTrack {
+        todo!()
+    }
+    fn can_play_type(&self, r#type: &str) -> &str {
+        todo!()
+    }
+    fn fast_seek(&mut self, time: usize) {
+        todo!()
+    }
+    fn load(&mut self) {
+        todo!()
+    }
+    fn pause(&mut self) {
+        todo!()
+    }
+    fn play(&mut self) {
+        todo!()
+    }
+    fn set_media_keys(&mut self, media_keys: Option<MediaKeys>) {
+        todo!()
+    }
+    const NETWORK_EMPTY: u8 = 0;
+    const NETWORK_IDLE: u8 = 1;
+    const NETWORK_LOADING: u8 = 2;
+    const NETWORK_NO_SOURCE: u8 = 3;
+    const HAVE_NOTHING: u8 = 0;
+    const HAVE_METADATA: u8 = 1;
+    const HAVE_CURRENT_DATA: u8 = 2;
+    const HAVE_FUTURE_DATA: u8 = 3;
+    const HAVE_ENOUGH_DATA: u8 = 4;
 }

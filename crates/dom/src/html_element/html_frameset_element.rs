@@ -1,11 +1,29 @@
 use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
-    DOMException, HTMLElement, InnerHtml,
+    DOMException, HTMLElement, InnerHtml, WindowEventHandlers,
 };
+
+#[deprecated]
 pub struct HTMLFramesetElement {
     value: HTMLElement,
 }
 
+impl HTMLFramesetElement {
+    pub fn cols(&self) -> &str {
+        todo!()
+    }
+    pub fn set_cols(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn rows(&self) -> &str {
+        todo!()
+    }
+    pub fn set_rows(&mut self, value: &str) {
+        todo!()
+    }
+}
+
+impl WindowEventHandlers for HTMLFramesetElement {}
 impl AsHTMLElement for HTMLFramesetElement {
     fn cast(&self) -> &HTMLElement {
         &self.value
@@ -15,6 +33,7 @@ impl AsHTMLElement for HTMLFramesetElement {
         &mut self.value
     }
 }
+
 impl AsElement for HTMLFramesetElement {
     fn cast(&self) -> &crate::Element {
         AsElement::cast(&self.value)
@@ -73,12 +92,13 @@ impl TryFrom<HTMLElement> for HTMLFramesetElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLFramesetElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLFramesetElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLFramesetElement"
+            )))
         }
     }
 }

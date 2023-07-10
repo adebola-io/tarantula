@@ -164,12 +164,13 @@ impl TryFrom<HTMLElement> for HTMLButtonElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::Button) {
             Ok(HTMLButtonElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLButtonElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLButtonElement"
+            )))
         }
     }
 }

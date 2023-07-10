@@ -1,4 +1,4 @@
-#![allow(unused)]
+#![allow(unused, deprecated)]
 mod animatable;
 mod attr;
 mod document;
@@ -11,13 +11,14 @@ mod event_target;
 mod html_collection;
 mod html_element;
 mod inner_html;
+mod misc;
 mod named_node_map;
 mod node;
 mod nodelist;
-mod others;
 mod tag;
 #[cfg(test)]
 mod test;
+mod window;
 
 pub use animatable::*;
 pub use attr::Attr;
@@ -32,23 +33,22 @@ pub use element::{
 pub use event::{AsEvent, DOMHighResTimeStamp, Event};
 pub use event_target::{AsEventTarget, EventTarget};
 pub use html_collection::{HTMLCollection, HTMLCollectionOf};
-pub use html_element::{
-    AsHTMLElement, HTMLAnchorElement, HTMLButtonElement, HTMLDivElement, HTMLElement,
-    HTMLFormElement, HTMLLabelElement,
-};
-pub use inner_html::*;
-pub use named_node_map::*;
+pub use html_element::*;
+pub use inner_html::InnerHtml;
+pub use misc::*;
+pub use named_node_map::NamedNodeMap;
 pub use node::{
     AsChildNode, AsNode, AsParentNode, ChildNode, GetRootNodeOptions, Node, ParentNode,
 };
-pub use nodelist::*;
-pub use others::*;
+pub use nodelist::{MutNodeListOf, NodeListOf};
+pub use window::WindowEventHandlers;
 
 pub type DOMResult = Result<(), DOMException>;
 
 pub mod traits {
     pub use crate::{
         AsChildNode, AsElement, AsEvent, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
+        HTMLHyperlinkElementUtils, HTMLMediaElement, WindowEventHandlers,
     };
 }
 

@@ -73,12 +73,13 @@ impl TryFrom<HTMLElement> for HTMLScriptElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLScriptElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLScriptElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLScriptElement"
+            )))
         }
     }
 }

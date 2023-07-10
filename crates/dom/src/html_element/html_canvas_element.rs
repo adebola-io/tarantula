@@ -1,9 +1,88 @@
+use std::any::Any;
+
 use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
-    DOMException, HTMLElement, InnerHtml,
+    DOMException, HTMLElement, InnerHtml, MediaStream,
 };
+
+pub struct CanvasRenderingContext2DSettings;
+pub struct ImageBitmapRenderingContextSettings;
+pub struct ImageBitmapRenderingContext;
+pub struct CanvasRenderingContext2D;
+pub struct WebGLContextAttributes;
+pub struct WebGLRenderingContext;
+pub struct RenderingContext;
+
+pub struct WebGL2RenderingContext;
+pub struct BlobCallBack;
+pub struct OffscreenCanvas;
+
 pub struct HTMLCanvasElement {
     value: HTMLElement,
+}
+
+// Properties.
+impl HTMLCanvasElement {
+    pub fn height(&self) -> usize {
+        todo!()
+    }
+    pub fn set_height(&mut self, value: usize) {
+        todo!()
+    }
+    pub fn width(&self) -> usize {
+        todo!()
+    }
+    pub fn set_width(&mut self, value: usize) {
+        todo!()
+    }
+}
+
+// Methods.
+impl HTMLCanvasElement {
+    pub fn capture_stream(&mut self, frame_request_rate: usize) -> MediaStream {
+        todo!()
+    }
+    pub fn get_context(&self, context_id: &str, options: impl Any) -> Option<RenderingContext> {
+        todo!()
+    }
+    pub fn get_2d_context(
+        &self,
+        options: Option<CanvasRenderingContext2DSettings>,
+    ) -> Option<CanvasRenderingContext2D> {
+        todo!()
+    }
+    pub fn get_bitmaprenderer_context(
+        &self,
+        options: Option<ImageBitmapRenderingContextSettings>,
+    ) -> Option<ImageBitmapRenderingContext> {
+        todo!()
+    }
+    pub fn get_webgl(
+        &self,
+        options: Option<WebGLContextAttributes>,
+    ) -> Option<WebGLRenderingContext> {
+        todo!()
+    }
+    pub fn get_webgl2_context(
+        &self,
+        options: Option<WebGLContextAttributes>,
+    ) -> Option<WebGL2RenderingContext> {
+        todo!()
+    }
+    pub fn to_blob(
+        &mut self,
+        callback: BlobCallBack,
+        r#type: Option<&str>,
+        quality: Option<impl Any>,
+    ) {
+        todo!()
+    }
+    pub fn to_data_url(&self, r#type: Option<&str>, quality: Option<impl Any>) -> String {
+        todo!()
+    }
+    pub fn transfer_control_to_offscreen(&self) -> OffscreenCanvas {
+        todo!()
+    }
 }
 
 impl AsHTMLElement for HTMLCanvasElement {
@@ -73,12 +152,13 @@ impl TryFrom<HTMLElement> for HTMLCanvasElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLCanvasElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLCanvasElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLCanvasElement"
+            )))
         }
     }
 }

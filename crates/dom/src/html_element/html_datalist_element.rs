@@ -1,9 +1,15 @@
 use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
-    DOMException, HTMLElement, InnerHtml,
+    DOMException, HTMLCollectionOf, HTMLElement, HTMLOptionElement, InnerHtml,
 };
 pub struct HTMLDatalistElement {
     value: HTMLElement,
+}
+
+impl HTMLDatalistElement {
+    pub fn options(&self) -> HTMLCollectionOf<HTMLOptionElement> {
+        todo!()
+    }
 }
 
 impl AsHTMLElement for HTMLDatalistElement {
@@ -73,12 +79,13 @@ impl TryFrom<HTMLElement> for HTMLDatalistElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLDatalistElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLDatalistElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLDatalistElement"
+            )))
         }
     }
 }

@@ -6,6 +6,15 @@ pub struct HTMLDetailsElement {
     value: HTMLElement,
 }
 
+impl HTMLDetailsElement {
+    pub fn open(&self) -> bool {
+        todo!()
+    }
+    pub fn set_open(&mut self, value: bool) {
+        todo!()
+    }
+}
+
 impl AsHTMLElement for HTMLDetailsElement {
     fn cast(&self) -> &HTMLElement {
         &self.value
@@ -73,12 +82,13 @@ impl TryFrom<HTMLElement> for HTMLDetailsElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLDetailsElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLDetailsElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLDetailsElement"
+            )))
         }
     }
 }

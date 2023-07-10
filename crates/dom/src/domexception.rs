@@ -1,9 +1,9 @@
 #[derive(Debug)]
 pub enum DOMException {
-    HierarchyRequestError(&'static str),
-    SyntaxError(&'static str),
-    InvalidCharacterError(&'static str),
-    TypeError(&'static str),
+    HierarchyRequestError(String),
+    SyntaxError(String),
+    InvalidCharacterError(String),
+    TypeError(String),
 }
 
 impl DOMException {
@@ -15,7 +15,7 @@ impl DOMException {
         matches!(self, Self::HierarchyRequestError(..))
     }
 
-    fn message(&self) -> &'static str {
+    fn message(&self) -> &String {
         match self {
             DOMException::HierarchyRequestError(message)
             | DOMException::SyntaxError(message)

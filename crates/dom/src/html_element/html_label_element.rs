@@ -92,12 +92,13 @@ impl TryFrom<HTMLElement> for HTMLLabelElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::Label) {
             Ok(HTMLLabelElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLLabelElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLLabelElement"
+            )))
         }
     }
 }

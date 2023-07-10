@@ -1,9 +1,57 @@
 use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
-    DOMException, HTMLElement, InnerHtml,
+    DOMException, Document, HTMLElement, InnerHtml,
 };
 pub struct HTMLEmbedElement {
     value: HTMLElement,
+}
+impl HTMLEmbedElement {
+    #[deprecated]
+    pub fn align(&self) -> &str {
+        todo!()
+    }
+    #[deprecated]
+    pub fn set_align(&self, value: &str) {
+        todo!()
+    }
+    pub fn height(&self) -> &str {
+        todo!()
+    }
+    pub fn set_height(&mut self, value: &str) {
+        todo!()
+    }
+    #[deprecated]
+    pub fn name(&self) -> &str {
+        todo!()
+    }
+    #[deprecated]
+    pub fn set_name(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn src(&self) -> &str {
+        todo!()
+    }
+    pub fn set_src(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn r#type(&self) -> &str {
+        todo!()
+    }
+    pub fn set_type(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn width(&self) -> &str {
+        todo!()
+    }
+    pub fn set_width(&mut self, value: &str) {
+        todo!()
+    }
+}
+
+impl HTMLEmbedElement {
+    pub fn get_svg_document(&self) -> Option<Document> {
+        todo!()
+    }
 }
 
 impl AsHTMLElement for HTMLEmbedElement {
@@ -73,12 +121,13 @@ impl TryFrom<HTMLElement> for HTMLEmbedElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLEmbedElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLEmbedElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLEmbedElement"
+            )))
         }
     }
 }

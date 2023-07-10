@@ -1,9 +1,65 @@
 use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
-    DOMException, HTMLElement, InnerHtml,
+    DOMException, Document, HTMLElement, InnerHtml,
 };
+
+#[deprecated]
 pub struct HTMLFrameElement {
     value: HTMLElement,
+}
+
+pub struct WindowProxy;
+
+#[deprecated]
+impl HTMLFrameElement {
+    pub fn content_document(&self) -> Option<Document> {
+        todo!()
+    }
+    pub fn content_window(&self) -> Option<WindowProxy> {
+        todo!()
+    }
+    pub fn frame_border(&self) -> &str {
+        todo!()
+    }
+    pub fn set_frame_border(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn long_desc(&self) -> &str {
+        todo!()
+    }
+    pub fn set_long_desc(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn margin_height(&self) -> &str {
+        todo!()
+    }
+    pub fn set_margin_height(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn name(&self) -> &str {
+        todo!()
+    }
+    pub fn set_name(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn no_resize(&self) -> bool {
+        todo!()
+    }
+    pub fn set_no_resize(&mut self, value: bool) {
+        todo!()
+    }
+    pub fn scrolling(&self) -> &str {
+        todo!()
+    }
+    pub fn set_scrolling(&mut self, value: &str) {
+        todo!()
+    }
+    pub fn src(&self) -> &str {
+        todo!()
+    }
+    pub fn set_src(&mut self, value: &str) {
+        todo!()
+    }
 }
 
 impl AsHTMLElement for HTMLFrameElement {
@@ -73,12 +129,13 @@ impl TryFrom<HTMLElement> for HTMLFrameElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLFrameElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLFrameElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLFrameElement"
+            )))
         }
     }
 }

@@ -73,12 +73,13 @@ impl TryFrom<HTMLElement> for HTMLLinkElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
+        let tag = value.tag();
         if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
             Ok(HTMLLinkElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLLinkElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an  HTMLLinkElement"
+            )))
         }
     }
 }

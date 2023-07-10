@@ -1,11 +1,16 @@
 use crate::{
     tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
-    DOMException, HTMLElement, InnerHtml,
+    DOMException, HTMLElement, HTMLMediaElement, InnerHtml,
 };
+
+/// The [`HTMLAudioElement`] struct provides special methods (beyond the regular [`HTMLElement`] struct) for manipulating `<area>` elements.
+///
+/// MDN Reference: [`HTMLAudioElement`](https://developer.mozilla.org/en-US/docs/Web/API/HTMLAudioElement).
 pub struct HTMLAudioElement {
     value: HTMLElement,
 }
 
+impl HTMLMediaElement for HTMLAudioElement {}
 impl AsHTMLElement for HTMLAudioElement {
     fn cast(&self) -> &HTMLElement {
         &self.value
@@ -73,12 +78,13 @@ impl TryFrom<HTMLElement> for HTMLAudioElement {
     type Error = DOMException;
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
-        if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
+        let tag = value.tag();
+        if matches!(tag, Tag::Audio) {
             Ok(HTMLAudioElement { value })
         } else {
-            Err(DOMException::TypeError(
-                "Cannot convert element to an HTMLAudioElement",
-            ))
+            Err(DOMException::TypeError(format!(
+                "Cannot convert element with tag {tag} to an HTMLAudioElement"
+            )))
         }
     }
 }

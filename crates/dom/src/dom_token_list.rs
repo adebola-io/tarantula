@@ -413,14 +413,14 @@ impl<'a> DOMTokenList<'a> {
 
 fn validate_token(token: &str) -> Result<(), DOMException> {
     if token.len() == 0 {
-        return Err(DOMException::SyntaxError(
+        return Err(DOMException::SyntaxError(String::from(
             "Empty string added to DOMTokenList.",
-        ));
+        )));
     }
     if token.find(|ch: char| ch.is_ascii_whitespace()).is_some() {
-        return Err(DOMException::InvalidCharacterError(
+        return Err(DOMException::InvalidCharacterError(String::from(
             "Token with whitespace added to DOMTokenList.",
-        ));
+        )));
     }
     Ok(())
 }
