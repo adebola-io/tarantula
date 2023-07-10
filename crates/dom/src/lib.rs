@@ -22,7 +22,7 @@ mod window;
 
 pub use animatable::*;
 pub use attr::Attr;
-pub use document::Document;
+pub use document::{AsDocument, Document};
 pub use document_type::*;
 pub use dom_token_list::{DOMTokenList, MutDOMTokenList};
 pub use domexception::*;
@@ -47,8 +47,8 @@ pub type DOMResult = Result<(), DOMException>;
 
 pub mod traits {
     pub use crate::{
-        AsChildNode, AsElement, AsEvent, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
-        HTMLHyperlinkElementUtils, HTMLMediaElement, WindowEventHandlers,
+        AsChildNode, AsDocument, AsElement, AsEvent, AsEventTarget, AsHTMLElement, AsNode,
+        AsParentNode, HTMLHyperlinkElementUtils, HTMLMediaElement, WindowEventHandlers,
     };
 }
 

@@ -50,6 +50,16 @@ pub struct Document {
     pub(crate) inner: Rc<RefCell<DocumentBase>>,
 }
 
+impl AsDocument for Document {
+    fn cast(&self) -> &Document {
+        self
+    }
+
+    fn cast_mut(&mut self) -> &mut Document {
+        self
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) struct WeakDocumentRef {
     pub(crate) inner: Weak<RefCell<DocumentBase>>,
@@ -222,84 +232,86 @@ impl Document {
     }
 }
 
-impl Document {
+pub trait AsDocument {
+    fn cast(&self) -> &Document;
+    fn cast_mut(&mut self) -> &mut Document;
     /// Returns the URL for the document.
     ///
     /// [MDN Reference](https://developer.mozilla.org/docs/Web/API/Document/URL)
-    pub fn url(&self) -> &str {
-        &self.inner().url
+    fn url(&self) -> &str {
+        &AsDocument::cast(self).inner().url
     }
     /// Returns the color of active links in the document.
     ///
     /// [MDN Reference](https://developer.mozilla.org/docs/Web/API/Document/alinkColor)
     #[deprecated]
-    pub fn a_link_color(&self) -> &str {
+    fn a_link_color(&self) -> &str {
         todo!()
     }
     /// Sets the color of active links in the document.
     ///
     /// [MDN Reference](https://developer.mozilla.org/docs/Web/API/Document/alinkColor)
     #[deprecated]
-    pub fn set_a_link_color(&mut self, value: &str) {
+    fn set_a_link_color(&mut self, value: &str) {
         todo!()
     }
-    pub fn all(&self) -> HTMLAllCollection {
+    fn all(&self) -> HTMLAllCollection {
         todo!()
     }
     #[deprecated]
-    pub fn anchors(&self) -> HTMLCollectionOf<HTMLAnchorElement> {
+    fn anchors(&self) -> HTMLCollectionOf<HTMLAnchorElement> {
         todo!()
     }
-    pub fn applets(&self) -> HTMLCollection {
+    fn applets(&self) -> HTMLCollection {
         todo!()
     }
-    pub fn bg_color(&self) -> &str {
+    fn bg_color(&self) -> &str {
         todo!()
     }
-    pub fn set_bg_color(&mut self, value: &str) {
+    fn set_bg_color(&mut self, value: &str) {
         todo!()
     }
-    pub fn body(&self) -> HTMLElement {
+    fn body(&self) -> HTMLElement {
         todo!()
     }
-    pub fn set_body(&mut self, value: HTMLElement) {
+    fn set_body(&mut self, value: HTMLElement) {
         todo!()
     }
-    pub fn character_set(&self) -> &str {
+    fn character_set(&self) -> &str {
         todo!()
     }
-    pub fn charset(&self) -> &str {
+    fn charset(&self) -> &str {
         todo!()
     }
-    pub fn compat_mode(&self) -> &str {
+    fn compat_mode(&self) -> &str {
         todo!()
     }
-    pub fn content_type(&self) -> &str {
+    fn content_type(&self) -> &str {
         todo!()
     }
-    pub fn cookie(&self) -> &str {
+    fn cookie(&self) -> &str {
         todo!()
     }
-    pub fn set_cookie(&mut self, value: &str) {
+    fn set_cookie(&mut self, value: &str) {
         todo!()
     }
-    pub fn current_script(&self) -> HTMLOrSVGScriptElement {
+    fn current_script(&self) -> HTMLOrSVGScriptElement {
         todo!()
     }
     /// Create an HTML attribute with the specified `local_name`.
-    pub fn create_attribute(&self, local_name: &str) -> Attr {
+    fn create_attribute(&self, local_name: &str) -> Attr {
         let weak_ref = WeakDocumentRef {
-            inner: Rc::downgrade(&self.inner),
+            inner: Rc::downgrade(&AsDocument::cast(self).inner),
         };
         Attr::in_document(local_name, weak_ref)
     }
     /// Create an HTML element with the specified `tagname`.
-    pub fn create_element(&self, tagname: &str) -> HTMLElement {
+    fn create_element(&self, tagname: &str) -> HTMLElement {
         let weak_ref = WeakDocumentRef {
-            inner: Rc::downgrade(&self.inner),
+            inner: Rc::downgrade(&AsDocument::cast(self).inner),
         };
         let html_element = HTMLElement::in_document(tagname, weak_ref);
-        self.associate_node_with_element(
+        AsDocument::cast(self).associate_node_with_element(
             AsNode::cast(&html_element).get_base_ptr(),
             html_element.clone_ref(),
         );

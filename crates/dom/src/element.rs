@@ -5,9 +5,9 @@ use std::{
 };
 
 use crate::{
-    document::DocumentBase, dom_token_list::ListType, tag::Tag, AsChildNode, AsEventTarget, AsNode,
-    AsParentNode, Attr, DOMException, DOMTokenList, HTMLCollection, HTMLCollectionOf, InnerHtml,
-    MutDOMTokenList, NamedNodeMap, Node,
+    document::DocumentBase, dom_token_list::ListType, tag::Tag, AsChildNode, AsDocument,
+    AsEventTarget, AsNode, AsParentNode, Attr, DOMException, DOMTokenList, HTMLCollection,
+    HTMLCollectionOf, InnerHtml, MutDOMTokenList, NamedNodeMap, Node,
 };
 
 pub struct ShadowRoot;

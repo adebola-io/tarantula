@@ -1,6 +1,5 @@
-use crate::AsEventTarget;
 #[warn(unused)]
-use crate::{Document, HTMLAnchorElement};
+use crate::{traits::*, Document, HTMLAnchorElement};
 
 #[test]
 fn test() {

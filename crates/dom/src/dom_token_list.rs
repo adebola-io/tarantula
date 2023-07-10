@@ -1,6 +1,6 @@
 // use std::ops::Index;
 
-use crate::{AsElement, AsNode, Attr, DOMException, Element};
+use crate::{AsDocument, AsElement, AsNode, Attr, DOMException, Element};
 
 pub(crate) enum ListType {
     ClassList,

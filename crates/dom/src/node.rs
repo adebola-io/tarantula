@@ -1115,7 +1115,7 @@ mod helpers {
 
 #[cfg(test)]
 mod tests {
-    use crate::{node::NodeBase, AsNode, Document, HTMLElement, Node};
+    use crate::{node::NodeBase, AsDocument, AsNode, Document, HTMLElement, Node};
     #[test]
     fn parent_child_node_check() {
         let document = Document::new();
