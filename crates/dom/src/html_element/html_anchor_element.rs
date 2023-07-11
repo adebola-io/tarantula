@@ -3,7 +3,7 @@ use crate::{
     DOMException, DOMTokenList, HTMLElement, HTMLHyperlinkElementUtils, InnerHtml,
 };
 pub struct HTMLAnchorElement {
-    value: HTMLElement,
+    html_element: HTMLElement,
 }
 
 // Properties
@@ -101,22 +101,22 @@ impl HTMLAnchorElement {
 
 impl AsHTMLElement for HTMLAnchorElement {
     fn cast(&self) -> &HTMLElement {
-        &self.value
+        &self.html_element
     }
 
     fn cast_mut(&mut self) -> &mut HTMLElement {
-        &mut self.value
+        &mut self.html_element
     }
 }
 impl HTMLHyperlinkElementUtils for HTMLAnchorElement {}
 
 impl AsElement for HTMLAnchorElement {
     fn cast(&self) -> &crate::Element {
-        AsElement::cast(&self.value)
+        AsElement::cast(&self.html_element)
     }
 
     fn cast_mut(&mut self) -> &mut crate::Element {
-        AsElement::cast_mut(&mut self.value)
+        AsElement::cast_mut(&mut self.html_element)
     }
 }
 impl InnerHtml for HTMLAnchorElement {
@@ -132,20 +132,16 @@ impl AsParentNode for HTMLAnchorElement {}
 impl AsChildNode for HTMLAnchorElement {}
 impl AsNode for HTMLAnchorElement {
     fn cast(&self) -> &crate::Node {
-        AsNode::cast(&self.value)
+        AsNode::cast(&self.html_element)
     }
 
     fn cast_mut(&mut self) -> &mut crate::Node {
-        AsNode::cast_mut(&mut self.value)
-    }
-
-    fn node_name(&self) -> String {
-        self.value.tag_name()
+        AsNode::cast_mut(&mut self.html_element)
     }
 
     fn clone_node(&self, deep: bool) -> Self {
         HTMLAnchorElement {
-            value: self.value.clone_node(deep),
+            html_element: self.html_element.clone_node(deep),
         }
     }
 }
@@ -156,11 +152,11 @@ impl<T: AsNode> PartialEq<T> for HTMLAnchorElement {
 }
 impl AsEventTarget for HTMLAnchorElement {
     fn cast(&self) -> &crate::EventTarget {
-        AsEventTarget::cast(&self.value)
+        AsEventTarget::cast(&self.html_element)
     }
 
     fn cast_mut(&mut self) -> &mut crate::EventTarget {
-        AsEventTarget::cast_mut(&mut self.value)
+        AsEventTarget::cast_mut(&mut self.html_element)
     }
 }
 
@@ -174,6 +170,8 @@ impl TryFrom<HTMLElement> for HTMLAnchorElement {
                 "Cannot convert element with tag {tag} to an HTMLAnchorElement"
             )));
         }
-        return Ok(HTMLAnchorElement { value });
+        return Ok(HTMLAnchorElement {
+            html_element: value,
+        });
     }
 }

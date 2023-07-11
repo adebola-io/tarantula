@@ -7,19 +7,19 @@ use std::{
 use crate::{
     element::ElementBase,
     html_collection::{LiveCollection, LiveCollectionType},
-    html_element::HTMLElementBase,
-    node::NodeBase,
+    node::{NodeBase, NodeType},
     tag::Tag,
     AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode, Attr, Element,
-    HTMLAnchorElement, HTMLCollection, HTMLCollectionOf, HTMLElement, HTMLOrSVGScriptElement, Node,
+    HTMLAnchorElement, HTMLCollection, HTMLCollectionOf, HTMLElement, HTMLElementBase,
+    HTMLOrSVGScriptElement, Node,
 };
 
 pub struct HTMLAllCollection;
 
 pub(crate) struct DocumentBase {
     document_node: Option<Node>,
-    url: String,
-    map_html: HashMap<*mut NodeBase, HTMLElement>,
+    pub url: String,
+    html_elements: HashMap<*mut NodeBase, Weak<RefCell<HTMLElementBase>>>,
     live_collections: Vec<Weak<RefCell<LiveCollection<Element>>>>,
 }
 
@@ -34,6 +34,10 @@ impl DocumentBase {
             .iter()
             .filter_map(|live_collection| live_collection.upgrade())
             .for_each(|collection| collection.borrow_mut().update());
+    }
+
+    pub(crate) fn base_url(&self) -> &str {
+        "Hello"
     }
 }
 
@@ -87,10 +91,6 @@ impl AsNode for Document {
         self.inner().document_node.as_mut().unwrap()
     }
 
-    fn node_name(&self) -> String {
-        String::from("#document")
-    }
-
     fn clone_node(&self, deep: bool) -> Self {
         todo!()
     }
@@ -110,7 +110,7 @@ impl Document {
         let mut base = DocumentBase {
             document_node: None,
             url: String::new(),
-            map_html: HashMap::new(),
+            html_elements: HashMap::new(),
             live_collections: vec![],
         };
         let document = Self {
@@ -119,7 +119,8 @@ impl Document {
         let weak_ref = WeakDocumentRef {
             inner: Rc::downgrade(&document.inner),
         };
-        document.inner.borrow_mut().document_node = Some(Node::in_document(9, weak_ref));
+        document.inner.borrow_mut().document_node =
+            Some(Node::in_document(NodeType::DocumentNode, weak_ref));
         document
     }
     pub(crate) fn is_html_document(&self) -> bool {
@@ -128,22 +129,16 @@ impl Document {
     pub(crate) fn associate_node_with_element(
         &self,
         node_base: *mut NodeBase,
-        html_element: HTMLElement,
+        html_element: Weak<RefCell<HTMLElementBase>>,
     ) {
-        self.inner().map_html.insert(node_base, html_element);
+        self.inner().html_elements.insert(node_base, html_element);
     }
 
     /// Find an element with a node base.
-    pub(crate) fn lookup_node(&self, node_base: *mut NodeBase) -> Option<Element> {
-        Some(
-            self.inner()
-                .map_html
-                .get(&node_base)?
-                .inner
-                .borrow()
-                .element
-                .clone_ref(),
-        )
+    pub(crate) fn lookup_html_element(&self, node_base: *mut NodeBase) -> Option<Element> {
+        let node = self.inner().html_elements.get(&node_base)?.upgrade()?;
+        let element = node.borrow().element().clone_ref();
+        Some(element)
     }
     /// Find a live collection in the document with the parameters given.
     pub(crate) fn lookup_class_collection(
@@ -228,7 +223,11 @@ impl Document {
         new_collection_ref
     }
     pub(crate) fn drop_node(&mut self, base_ptr: *mut NodeBase) {
-        self.inner().map_html.remove(&base_ptr);
+        self.inner().html_elements.remove(&base_ptr);
+    }
+
+    pub(crate) fn document_base_url(&self) -> &str {
+        todo!()
     }
 }
 
@@ -313,7 +312,7 @@ pub trait AsDocument {
         let html_element = HTMLElement::in_document(tagname, weak_ref);
         AsDocument::cast(self).associate_node_with_element(
             AsNode::cast(&html_element).get_base_ptr(),
-            html_element.clone_ref(),
+            Rc::downgrade(&html_element.inner),
         );
         html_element
     }

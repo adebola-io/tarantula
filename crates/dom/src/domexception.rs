@@ -4,6 +4,7 @@ pub enum DOMException {
     SyntaxError(String),
     InvalidCharacterError(String),
     TypeError(String),
+    IllegalConstructor(String),
 }
 
 impl DOMException {
@@ -20,7 +21,8 @@ impl DOMException {
             DOMException::HierarchyRequestError(message)
             | DOMException::SyntaxError(message)
             | DOMException::InvalidCharacterError(message)
-            | DOMException::TypeError(message) => message,
+            | DOMException::TypeError(message)
+            | DOMException::IllegalConstructor(message) => message,
         }
     }
 
@@ -30,6 +32,7 @@ impl DOMException {
             DOMException::SyntaxError(_) => "SyntaxError",
             DOMException::InvalidCharacterError(_) => "InvalidCharacterError",
             DOMException::TypeError(_) => "TypeError",
+            DOMException::IllegalConstructor(message) => "IllegalConstructor",
         }
     }
 }

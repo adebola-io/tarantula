@@ -1,13 +1,12 @@
 use std::{
     cell::RefCell,
-    mem::ManuallyDrop,
     rc::{Rc, Weak},
 };
 
 use crate::{
-    document::DocumentBase, dom_token_list::ListType, tag::Tag, AsChildNode, AsDocument,
-    AsEventTarget, AsNode, AsParentNode, Attr, DOMException, DOMTokenList, HTMLCollection,
-    HTMLCollectionOf, InnerHtml, MutDOMTokenList, NamedNodeMap, Node,
+    document::DocumentBase, dom_token_list::ListType, node::NodeType, tag::Tag, AsChildNode,
+    AsDocument, AsEventTarget, AsNode, AsParentNode, Attr, DOMException, DOMTokenList,
+    HTMLCollection, HTMLCollectionOf, InnerHtml, MutDOMTokenList, NamedNodeMap, Node,
 };
 
 pub struct ShadowRoot;
@@ -80,7 +79,7 @@ impl Element {
     }
 
     pub(crate) fn in_document(
-        tagname: &str,
+        tag: Tag,
         is_html: bool,
         weak_ref: crate::document::WeakDocumentRef,
     ) -> Element {
@@ -88,8 +87,8 @@ impl Element {
             inner_ref: Rc::new(RefCell::new(ElementBase {
                 attributes: None,
                 is_html,
-                node: Node::in_document(1, weak_ref),
-                tag: Tag::from(tagname),
+                node: Node::in_document(NodeType::ElementNode, weak_ref),
+                tag,
             })),
         };
         element.inner().attributes = Some(NamedNodeMap {
@@ -141,9 +140,7 @@ impl AsNode for Element {
     fn cast_mut(&mut self) -> &mut Node {
         &mut self.inner().node
     }
-    fn node_name(&self) -> String {
-        self.tag_name()
-    }
+
     fn clone_node(&self, deep: bool) -> Self {
         let mut element = Element {
             inner_ref: Rc::new(RefCell::new(ElementBase {

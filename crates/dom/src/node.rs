@@ -1,23 +1,61 @@
 use crate::{
-    document::WeakDocumentRef, AsElement, AsEventTarget, DOMException, Document, EventTarget,
-    HTMLCollection, HTMLElement, MutNodeListOf, NodeListOf,
+    document::{DocumentBase, WeakDocumentRef},
+    AsElement, AsEventTarget, DOMException, Document, Element, EventTarget, HTMLCollection,
+    HTMLElement, MutNodeListOf, NodeListOf,
 };
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
 };
 
-pub struct GetRootNodeOptions;
+#[derive(PartialEq)]
+pub struct MutationObserver;
+
+#[derive(PartialEq)]
+pub struct MutationObserverInit;
+#[derive(PartialEq)]
+pub struct GetRootNodeOptions {
+    pub composed: bool,
+}
+
+#[derive(PartialEq)]
+pub struct RegisteredObserver {
+    observer: MutationObserver,
+    options: MutationObserverInit,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) enum NodeType {
+    ElementNode = 1,
+    AttributeNode = 2,
+    TextNode = 3,
+    /// node is a CDATASection node.
+    CdataSectionNode = 4,
+    EntityReferenceNode = 5,
+    EntityNode = 6,
+    /// node is a ProcessingInstruction node.
+    ProcessingInstructionNode = 7,
+    /// node is a Comment node.
+    CommentNode = 8,
+    /// node is a document.
+    DocumentNode = 9,
+    /// node is a doctype.
+    DocumentTypeNode = 10,
+    /// node is a DocumentFragment node.
+    DocumentFragmentNode = 11,
+    NotationNode = 12,
+}
 
 #[derive(PartialEq)]
 pub(crate) struct NodeBase {
-    pub node_type: u8,
+    pub node_type: NodeType,
     /// The inner event target.
     pub event_target: EventTarget,
-    pub owner_document: Option<WeakDocumentRef>,
+    pub owner_document: WeakDocumentRef,
     /// Tuple containing the parent node and the index of this node in the parent's child list.
     pub parent: Option<(WeakNodeRef, usize)>,
     pub children: Vec<ChildNode>,
+    pub observer_list: Vec<RegisteredObserver>,
 }
 impl std::fmt::Debug for NodeBase {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -94,15 +132,21 @@ impl Node {
             || node_type == Self::DOCUMENT_NODE
             || node_type == Self::DOCUMENT_FRAGMENT_NODE
     }
+
+    pub(crate) unsafe fn document_base(&self) -> &DocumentBase {
+        &(*(*{ &*self.inner.as_ptr() }.owner_document.inner.as_ptr()).as_ptr())
+    }
+
     /// Create a node inside a document.
-    pub(crate) fn in_document(node_type: u8, weak_ref: WeakDocumentRef) -> Self {
+    pub(crate) fn in_document(node_type: NodeType, weak_ref: WeakDocumentRef) -> Self {
         Self {
             inner: Rc::new(RefCell::new(NodeBase {
                 node_type,
                 event_target: EventTarget::new(),
-                owner_document: Some(weak_ref),
+                owner_document: weak_ref,
                 parent: None,
                 children: vec![],
+                observer_list: vec![],
             })),
         }
     }
@@ -237,7 +281,7 @@ impl Node {
         if let Some(document) = self.owner_document() {
             document.inner.borrow_mut().refresh(
                 &document
-                    .lookup_node(self.get_base_ptr())
+                    .lookup_html_element(self.get_base_ptr())
                     .expect("Tried to retrieve a node that does not exist / is not an element."),
             )
         }
@@ -263,6 +307,12 @@ impl Node {
         }
         Ok(child)
     }
+
+    fn clone_ref(&self) -> Node {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
 }
 
 impl AsNode for Node {
@@ -278,23 +328,6 @@ impl AsNode for Node {
         let noderef = helpers::clone_node(AsNode::cast(self), deep);
         noderef.inner.borrow_mut().parent = None;
         noderef
-    }
-
-    fn node_name(&self) -> String {
-        let node_type = self.node_type();
-        String::from(if node_type == Self::DOCUMENT_NODE {
-            "#document"
-        } else if node_type == Self::CDATA_SECTION_NODE {
-            "#cdata-section"
-        } else if node_type == Self::COMMENT_NODE {
-            "#comment"
-        } else if node_type == Self::DOCUMENT_FRAGMENT_NODE {
-            "#document-fragment"
-        } else if node_type == Self::TEXT_NODE {
-            "#text"
-        } else {
-            unimplemented!("Node name should be implemented by Node-inherited structs.")
-        })
     }
 }
 
@@ -316,92 +349,6 @@ pub trait AsNode: AsEventTarget {
     #[doc(hidden)]
     /// Convert to a mutable reference to [`Node`].
     fn cast_mut(&mut self) -> &mut Node;
-    /// Returns a string slice representing the base URL of the document containing this node.
-    ///
-    /// MDN Reference: [`Node.baseURI`](https://developer.mozilla.org/en-US/docs/Web/API/Node/baseURI)
-    fn base_uri(&self) -> &str {
-        todo!()
-    }
-    /// Returns a live [`NodeList`] containing all the children of this node (including elements, text and comments).
-    /// NodeList being live means that if the children of the Node change, the NodeList object is automatically updated.
-    ///
-    /// MDN Reference: [`Node.childNodes`](https://developer.mozilla.org/en-US/docs/Web/API/Node/childNodes)
-    ///
-    /// [`NodeList`]: crate::NodeList
-    fn child_nodes(&self) -> NodeListOf<'_, ChildNode> {
-        NodeListOf {
-            items: unsafe { &(*AsNode::cast(self).inner.as_ptr()).children },
-        }
-    }
-    /// Returns a [`MutNodeList`] containing all the children of this node (including elements, text and comments).
-    /// NodeList being live means that if the children of the Node change, the NodeList object is automatically updated.
-    ///
-    /// MDN Reference: [`Node.childNodes`](https://developer.mozilla.org/en-US/docs/Web/API/Node/childNodes)
-    ///
-    /// [`MutNodeList`]: crate::MutNodeList
-    fn child_nodes_mut(&mut self) -> MutNodeListOf<'_, ChildNode> {
-        MutNodeListOf {
-            items: unsafe { &mut (*AsNode::cast(self).inner.as_ptr()).children },
-        }
-    }
-    /// Returns a reference to a [`ChildNode`] representing the first direct child node of the node, or None if the node has no child.
-    ///
-    /// MDN Reference: [`Node.firstChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/firstChild)
-    fn first_child(&self) -> Option<&ChildNode> {
-        self.child_nodes().items.get(0)
-    }
-    /// Returns a mutable reference to a [`ChildNode`] representing the first direct child node of the node, or None if the node has no child.
-    ///
-    /// MDN Reference: [`Node.firstChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/firstChild)
-    fn first_child_mut(&mut self) -> Option<&mut ChildNode> {
-        self.child_nodes_mut().items.get_mut(0)
-    }
-    /// Returns a boolean indicating whether or not the Node is connected (directly or indirectly) to the context object, e.g. the [`Document`] object in the case of the normal DOM, or the ShadowRoot in the case of a shadow DOM.
-    ///
-    /// MDN Reference: [`Node.isConnected`](https://developer.mozilla.org/en-US/docs/Web/API/Node/isConnected)
-    fn is_connected(&self) -> bool {
-        todo!()
-    }
-    /// Returns a reference to a [`ChildNode`] representing the last direct child node of the node, or None if the node has no child.
-    ///
-    /// MDN Reference: [`Node.lastChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/lasthild)
-    fn last_child(&self) -> Option<&ChildNode> {
-        self.child_nodes().items.last()
-    }
-    /// Returns a mutable reference to a [`ChildNode`] representing the last direct child node of the node, or None if the node has no child.
-    ///
-    /// MDN Reference: [`Node.lastChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/lasthild)
-    fn last_child_mut(&mut self) -> Option<&mut ChildNode> {
-        self.child_nodes_mut().items.last_mut()
-    }
-    /// Returns a reference to a [`ChildNode`] representing the next node in the tree, or None if there isn't such node.
-    ///
-    /// MDN Reference: [`Node.nextSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nextSibling)
-    fn next_sibling(&self) -> Option<&ChildNode> {
-        match &AsNode::cast(self).inner.borrow().parent {
-            Some(tuple) => helpers::get_node_at_index(&tuple.0, tuple.1 + 1),
-            _ => None,
-        }
-    }
-    /// Returns a mutable reference to a [`ChildNode`] representing the next node in the tree, or None if there isn't such node.
-    ///
-    /// MDN Reference: [`Node.nextSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nextSibling)
-    fn next_sibling_mut(&mut self) -> Option<&mut ChildNode> {
-        match &AsNode::cast(self).inner.borrow().parent {
-            Some(tuple) => helpers::get_mut_node_at_index(&tuple.0, tuple.1 + 1),
-            _ => None,
-        }
-    }
-    /// Returns a string containing the name of the Node.
-    ///
-    /// The structure of the name will differ with the node type. E.g. An [`HTMLElement`] will contain the name of the corresponding tag, like `"audio"` for an [`HTMLAudioElement`], a [`Text`] node will have the `"#text"` string, or a [`Document`] node will have the `"#document"` string.
-    ///
-    /// MDN Reference: [`Node.nodeName`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeName)
-    /// # Example
-    /// ```
-    /// // Add an example.
-    /// ```
-    fn node_name(&self) -> String;
     /// Returns an `u8` representing the type of the node. Possible values are:
     ///
     /// | Name | Value |
@@ -418,51 +365,64 @@ pub trait AsNode: AsEventTarget {
     ///
     /// MDN Reference: [`Node.nodeType`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType).
     fn node_type(&self) -> u8 {
-        AsNode::cast(self).inner.borrow_mut().node_type
+        AsNode::cast(self).inner.borrow_mut().node_type as u8
     }
-    /// Returns the value of the current node.
+    /// Returns a string containing the name of the Node.
     ///
-    /// MDN Reference: [Node.nodeValue]{https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeValue)
-    fn node_value(&self) -> Option<&str> {
+    /// The structure of the name will differ with the node type. E.g. An [`HTMLElement`] will contain the name of the corresponding tag, like `"audio"` for an [`HTMLAudioElement`], a [`Text`] node will have the `"#text"` string, or a [`Document`] node will have the `"#document"` string.
+    ///
+    /// MDN Reference: [`Node.nodeName`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeName)
+    fn node_name(&self) -> String {
         let node_type = self.node_type();
-        if node_type == Self::DOCUMENT_NODE
-            || node_type == Self::DOCUMENT_FRAGMENT_NODE
-            || node_type == Self::DOCUMENT_TYPE_NODE
-            || node_type == Self::ELEMENT_NODE
-        {
-            None
-        } else {
-            unimplemented!("node value should be implemented by subtraits.")
+        match AsNode::cast(self).inner.borrow().node_type {
+            NodeType::ElementNode => self
+                .owner_document()
+                .expect("Could not find document for node")
+                .lookup_html_element(AsNode::cast(self).get_base_ptr())
+                .expect("Something went wrong. Node is not recorded in owner document.")
+                .tag_name(),
+            NodeType::AttributeNode => todo!(),
+            NodeType::TextNode => "#text".to_string(),
+            NodeType::CdataSectionNode => "#cdata-section".to_string(),
+            NodeType::EntityReferenceNode => todo!(),
+            NodeType::EntityNode => todo!(),
+            NodeType::ProcessingInstructionNode => todo!(),
+            NodeType::CommentNode => "#comment".to_string(),
+            NodeType::DocumentNode => "#document".to_string(),
+            NodeType::DocumentTypeNode => todo!(),
+            NodeType::DocumentFragmentNode => "#document-fragment".to_string(),
+            NodeType::NotationNode => todo!(),
         }
     }
-    /// Sets the value of the current node.
+    /// Returns a string slice representing the base URL of the document containing this node.
     ///
-    /// MDN Reference: [Node.nodeValue]{https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeValue)
-    fn set_node_value(&mut self, value: &str) {
-        if !self.node_value().is_none() {
-            todo!()
-        }
+    /// MDN Reference: [`Node.baseURI`](https://developer.mozilla.org/en-US/docs/Web/API/Node/baseURI)
+    fn base_uri(&self) -> &str {
+        unsafe { AsNode::cast(self).document_base().base_url() }
     }
-    /// Returns the node document. Returns None for documents.
+    /// Returns a boolean indicating whether or not the Node is connected (directly or indirectly) to the context object, e.g. the [`Document`] object in the case of the normal DOM, or the ShadowRoot in the case of a shadow DOM.
+    ///
+    /// MDN Reference: [`Node.isConnected`](https://developer.mozilla.org/en-US/docs/Web/API/Node/isConnected)
+    fn is_connected(&self) -> bool {
+        todo!()
+    }
+    /// Returns the node document. Returns [`None`] for documents.
+    ///
+    /// [MDN Reference](https://developer.mozilla.org/en-US/docs/Web/API/Node/ownerDocument)
     fn owner_document(&self) -> Option<Document> {
         if self.node_type() == Self::DOCUMENT_NODE {
             return None;
         }
-        if let Some(weak_document_ref) = &AsNode::cast(self).inner.borrow().owner_document {
-            weak_document_ref
-                .inner
-                .upgrade()
-                .map(|inner| Document { inner })
-        } else {
-            None
-        }
+        AsNode::cast(self)
+            .inner
+            .borrow()
+            .owner_document
+            .inner
+            .upgrade()
+            .map(|inner| Document { inner })
     }
-    /// Returns the parent element.
-    fn parent_element(&self) -> Option<&HTMLElement> {
-        todo!()
-    }
-    /// Returns the parent element mutably.
-    fn parent_element_mut(&mut self) -> Option<&mut HTMLElement> {
+    /// Returns node's root.
+    fn get_root_node(&self, options: Option<GetRootNodeOptions>) -> Option<&Node> {
         todo!()
     }
     /// Returns the parent.
@@ -474,32 +434,101 @@ pub trait AsNode: AsEventTarget {
             _ => None,
         }
     }
-    /// Returns the previous sibling.
-    fn previous_sibling(&self) -> Option<&ChildNode> {
+    /// Returns the parent element.
+    fn parent_element(&self) -> Option<Element> {
+        self.owner_document()?
+            .lookup_html_element(AsNode::cast(&self.parent_node()?).get_base_ptr())
+    }
+    /// Returns boolean value indicating whether node has children.
+    ///
+    /// MDN Reference: [`Node.hasChildNodes()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/hasChildNodes)
+    /// # Example
+    /// ```
+    /// use dom::{Document, AsNode};
+    ///
+    /// let document = Document::new();
+    /// let mut node = document.create_element("div");
+    /// assert!(!node.has_child_nodes());
+    /// let mut child = document.create_element("div");
+    /// node.append_child(&mut child);
+    /// assert!(node.has_child_nodes());
+    /// ```
+    fn has_child_nodes(&self) -> bool {
+        self.child_nodes().len() > 0
+    }
+    /// Returns a live [`NodeList`] containing all the children of this node (including elements, text and comments).
+    /// NodeList being live means that if the children of the Node change, the NodeList object is automatically updated.
+    ///
+    /// MDN Reference: [`Node.childNodes`](https://developer.mozilla.org/en-US/docs/Web/API/Node/childNodes)
+    fn child_nodes(&self) -> NodeListOf<ChildNode> {
+        NodeListOf {
+            items: unsafe { &(*AsNode::cast(self).inner.as_ptr()).children },
+        }
+    }
+    /// Returns a MutNodeList containing all the children of this node (including elements, text and comments).
+    /// The list being live means that if the children of the Node change, the MutNodeList object is automatically updated.
+    ///
+    /// MDN Reference: [`Node.childNodes`](https://developer.mozilla.org/en-US/docs/Web/API/Node/childNodes)
+    fn child_nodes_mut(&mut self) -> MutNodeListOf<ChildNode> {
+        MutNodeListOf {
+            items: unsafe { &mut (*AsNode::cast(self).inner.as_ptr()).children },
+        }
+    }
+    /// Returns a [`ChildNode`] representing the first direct child node of the node, or None if the node has no child.
+    ///
+    /// MDN Reference: [`Node.firstChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/firstChild)
+    fn first_child(&self) -> Option<ChildNode> {
+        Some(self.child_nodes().items.get(0)?.clone_ref())
+    }
+    /// Returns a [`ChildNode`] representing the last direct child node of the node, or None if the node has no child.
+    ///
+    /// MDN Reference: [`Node.lastChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/lasthild)
+    fn last_child(&self) -> Option<ChildNode> {
+        Some(self.child_nodes().items.last()?.clone_ref())
+    }
+    ///  Returns a [`ChildNode`] representing the previous node in the tree, or None if there isn't such node.
+    ///
+    /// MDN Reference: [`Node.previousSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/previousSibling)
+    fn previous_sibling(&self) -> Option<ChildNode> {
         if let Some(tuple) = &AsNode::cast(self).inner.borrow().parent {
             if tuple.1 == 0 {
                 None
             } else {
-                helpers::get_node_at_index(&tuple.0, tuple.1 - 1)
+                Some(helpers::get_node_at_index(&tuple.0, tuple.1 - 1)?.clone_ref())
             }
         } else {
             None
         }
     }
-    /// Returns the previous sibling mutably.
-    fn previous_sibling_mut(&mut self) -> Option<&mut ChildNode> {
+    /// Returns a [`ChildNode`] representing the next node in the tree, or None if there isn't such node.
+    ///
+    /// MDN Reference: [`Node.nextSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nextSibling)
+    fn next_sibling(&self) -> Option<ChildNode> {
         match &AsNode::cast(self).inner.borrow().parent {
-            Some(tuple) => {
-                let is_first_node = tuple.1 == 0;
-                if is_first_node {
-                    None
-                } else {
-                    helpers::get_mut_node_at_index(&tuple.0, tuple.1 - 1)
-                }
-            }
+            Some(tuple) => Some(helpers::get_node_at_index(&tuple.0, tuple.1 + 1)?.clone_ref()),
             _ => None,
         }
     }
+    /// Returns the value of the current node.
+    ///
+    /// MDN Reference: [Node.nodeValue]{https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeValue)
+    fn node_value(&self) -> Option<&str> {
+        match AsNode::cast(self).inner.borrow().node_type {
+            NodeType::AttributeNode => todo!(),
+            _ => None,
+        }
+    }
+    /// Sets the value of the current node.
+    ///
+    /// MDN Reference: [Node.nodeValue]{https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeValue)
+    fn set_node_value(&mut self, value: Option<&str>) {
+        let value = value.unwrap_or("");
+        match AsNode::cast(self).inner.borrow().node_type {
+            NodeType::AttributeNode => todo!(),
+            _ => {}
+        }
+    }
+
     fn text_content(&self) -> Option<&str> {
         unimplemented!()
     }
@@ -567,27 +596,6 @@ pub trait AsNode: AsEventTarget {
             }
         }
         false
-    }
-    /// Returns node's root.
-    fn get_root_node(&self, options: Option<GetRootNodeOptions>) -> Option<&Node> {
-        todo!()
-    }
-    /// Returns boolean value indicating whether node has children.
-    ///
-    /// MDN Reference: [`Node.hasChildNodes()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/hasChildNodes)
-    /// # Example
-    /// ```
-    /// use dom::{Document, AsNode};
-    ///
-    /// let document = Document::new();
-    /// let mut node = document.create_element("div");
-    /// assert!(!node.has_child_nodes());
-    /// let mut child = document.create_element("div");
-    /// node.append_child(&mut child);
-    /// assert!(node.has_child_nodes());
-    /// ```
-    fn has_child_nodes(&self) -> bool {
-        self.child_nodes().len() > 0
     }
     /// Inserts a Node before the reference node as a child of a specified parent node.
     ///
@@ -801,10 +809,6 @@ impl AsNode for ParentNode {
             inner: self.inner.clone_node(deep),
         }
     }
-
-    fn node_name(&self) -> String {
-        AsNode::cast(self).node_name()
-    }
 }
 impl AsParentNode for ParentNode {}
 
@@ -893,6 +897,13 @@ pub trait AsParentNode: AsNode {
 pub struct ChildNode {
     inner: Node,
 }
+impl ChildNode {
+    fn clone_ref(&self) -> Self {
+        ChildNode {
+            inner: self.inner.clone_ref(),
+        }
+    }
+}
 impl<T: AsNode> PartialEq<T> for ChildNode {
     fn eq(&self, other: &T) -> bool {
         &self.inner == AsNode::cast(other)
@@ -928,9 +939,6 @@ impl AsNode for ChildNode {
             inner: self.inner.clone_node(deep),
         }
     }
-    fn node_name(&self) -> String {
-        AsNode::cast(self).node_name()
-    }
 }
 impl AsChildNode for ChildNode {}
 
@@ -944,8 +952,8 @@ pub trait AsChildNode: AsNode {
     ) -> Result<(), DOMException> {
         let node = AsNode::cast_mut(node.into());
         if let Some(mut parent) = self.parent_node() {
-            match self.next_sibling_mut() {
-                Some(next) => parent.insert_before(node, Some(next))?,
+            match self.next_sibling() {
+                Some(mut next) => parent.insert_before(node, Some(&mut next))?,
                 None => parent.append_child(node)?,
             };
         }
@@ -1046,17 +1054,6 @@ mod helpers {
         }
     }
 
-    pub fn get_mut_node_at_index<'a>(
-        parentref: &WeakNodeRef,
-        index: usize,
-    ) -> Option<&'a mut ChildNode> {
-        match parentref.inner.upgrade() {
-            Some(parent_node_ref) => unsafe { &mut *parent_node_ref.as_ptr() }
-                .children
-                .get_mut(index),
-            None => None,
-        }
-    }
     /// Return the child node at a particular index, if it exists.
     pub fn get_node_at_index<'a>(parentref: &WeakNodeRef, index: usize) -> Option<&'a ChildNode> {
         match parentref.inner.upgrade() {
@@ -1083,6 +1080,7 @@ mod helpers {
                             inner: clone_node(noderef, deep),
                         })
                         .collect(),
+                    observer_list: vec![],
                 })),
             }
         } else {
@@ -1102,6 +1100,7 @@ mod helpers {
                             },
                         })
                         .collect(),
+                    observer_list: vec![],
                 })),
             }
         }
@@ -1124,16 +1123,16 @@ mod tests {
         let mut grandchild = document.create_element("p");
         parent.append_child(&mut child).unwrap();
         parent
-            .first_child_mut()
+            .first_child()
             .unwrap()
             .append_child(&mut grandchild)
             .unwrap();
 
-        assert_eq!(parent.first_child().unwrap(), &child);
-        assert_eq!(parent.last_child().unwrap(), &child);
+        assert_eq!(parent.first_child().unwrap(), child);
+        assert_eq!(parent.last_child().unwrap(), child);
         assert_eq!(child.parent_node().as_ref().unwrap(), &parent);
 
-        assert_eq!(child.first_child().unwrap(), &grandchild);
+        assert_eq!(child.first_child().unwrap(), grandchild);
 
         assert!(parent.contains(&grandchild));
 
@@ -1153,10 +1152,10 @@ mod tests {
         parent.append_child(&mut child2).unwrap();
         parent.append_child(&mut child3).unwrap();
 
-        assert_eq!(child1.next_sibling().unwrap(), &child2);
-        assert_eq!(child2.next_sibling().unwrap(), &child3);
-        assert_eq!(child2.previous_sibling().unwrap(), &child1);
-        assert_eq!(child3.previous_sibling().unwrap(), &child2);
+        assert_eq!(child1.next_sibling().unwrap(), child2);
+        assert_eq!(child2.next_sibling().unwrap(), child3);
+        assert_eq!(child2.previous_sibling().unwrap(), child1);
+        assert_eq!(child3.previous_sibling().unwrap(), child2);
     }
 
     #[test]

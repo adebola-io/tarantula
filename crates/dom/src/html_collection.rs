@@ -41,7 +41,7 @@ impl<'a> HTMLCollection<'a> {
     pub fn item(&self, index: usize) -> Option<Element> {
         let node = self.items.get(index)?;
         node.owner_document()?
-            .lookup_node(AsNode::cast(node).get_base_ptr())
+            .lookup_html_element(AsNode::cast(node).get_base_ptr())
     }
     /// Retrieves a select object or an object from an options collection.
     pub fn named_item(&self, name: &str) -> Option<Element> {
@@ -57,7 +57,7 @@ impl<'a> IntoIterator for HTMLCollection<'a> {
         self.items.iter().map(|node| {
             node.owner_document()
                 .unwrap()
-                .lookup_node(AsNode::cast(node).get_base_ptr())
+                .lookup_html_element(AsNode::cast(node).get_base_ptr())
                 .unwrap()
         })
     }

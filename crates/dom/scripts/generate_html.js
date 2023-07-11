@@ -1,144 +1,154 @@
-const fs = require("fs");
+`           "!doctype" | "!DOCTYPE" => Self::DocType,
+            "a" => Self::A,
+            "abbr" => Self::Abbr,
+            "acronym" => Self::Acronym,
+            "address" => Self::Address,
+            "applet" => Self::Applet,
+            "area" => Self::Area,
+            "article" => Self::Article,
+            "aside" => Self::Aside,
+            "audio" => Self::Audio,
+            "b" => Self::B,
+            "base" => Self::Base,
+            "basefont" => Self::Basefont,
+            "bdi" => Self::Bdi,
+            "bdo" => Self::Bdo,
+            "bgsound" => Self::Bgsound,
+            "big" => Self::Big,
+            "blink" => Self::Blink,
+            "blockquote" => Self::Blockquote,
+            "body" => Self::Body,
+            "br" => Self::Br,
+            "button" => Self::Button,
+            "canvas" => Self::Canvas,
+            "caption" => Self::Caption,
+            "center" => Self::Center,
+            "cite" => Self::Cite,
+            "code" => Self::Code,
+            "col" => Self::Col,
+            "colgroup" => Self::Colgroup,
+            "data" => Self::Data,
+            "datalist" => Self::Datalist,
+            "dd" => Self::Dd,
+            "del" => Self::Del,
+            "details" => Self::Details,
+            "dfn" => Self::Dfn,
+            "dialog" => Self::Dialog,
+            "dir" => Self::Dir,
+            "div" => Self::Div,
+            "dl" => Self::Dl,
+            "dt" => Self::Dt,
+            "em" => Self::Em,
+            "embed" => Self::Embed,
+            "fieldset" => Self::Fieldset,
+            "figcaption" => Self::Figcaption,
+            "figure" => Self::Figure,
+            "font" => Self::Font,
+            "footer" => Self::Footer,
+            "form" => Self::Form,
+            "frame" => Self::Frame,
+            "frameset" => Self::Frameset,
+            "h1" => Self::H1,
+            "h2" => Self::H2,
+            "h3" => Self::H3,
+            "h4" => Self::H4,
+            "h5" => Self::H5,
+            "h6" => Self::H6,
+            "head" => Self::Head,
+            "header" => Self::Header,
+            "hr" => Self::Hr,
+            "html" => Self::Html,
+            "i" => Self::I,
+            "iframe" => Self::Iframe,
+            "image" => Self::Image,
+            "img" => Self::Img,
+            "input" => Self::Input,
+            "ins" => Self::Ins,
+            "isindex" => Self::Isindex,
+            "kbd" => Self::Kbd,
+            "keygen" => Self::Keygen,
+            "label" => Self::Label,
+            "legend" => Self::Legend,
+            "li" => Self::Li,
+            "link" => Self::Link,
+            "main" => Self::Main,
+            "map" => Self::Map,
+            "mark" => Self::Mark,
+            "marquee" => Self::Marquee,
+            "menu" => Self::Menu,
+            "menuitem" => Self::Menuitem,
+            "meta" => Self::Meta,
+            "meter" => Self::Meter,
+            "nav" => Self::Nav,
+            "nobr" => Self::Nobr,
+            "noembed" => Self::Noembed,
+            "noframes" => Self::Noframes,
+            "noscript" => Self::Noscript,
+            "object" => Self::Object,
+            "ol" => Self::Ol,
+            "optgroup" => Self::Optgroup,
+            "option" => Self::Option,
+            "output" => Self::Output,
+            "p" => Self::P,
+            "param" => Self::Param,
+            "picture" => Self::Picture,
+            "plaintext" => Self::Plaintext,
+            "pre" => Self::Pre,
+            "progress" => Self::Progress,
+            "q" => Self::Q,
+            "rp" => Self::Rp,
+            "rt" => Self::Rt,
+            "ruby" => Self::Ruby,
+            "s" => Self::S,
+            "samp" => Self::Samp,
+            "script" => Self::Script,
+            "section" => Self::Section,
+            "select" => Self::Select,
+            "small" => Self::Small,
+            "slot" => Self::Slot,
+            "source" => Self::Source,
+            "spacer" => Self::Spacer,
+            "span" => Self::Span,
+            "strike" => Self::Strike,
+            "strong" => Self::Strong,
+            "style" => Self::Style,
+            "sub" => Self::Sub,
+            "summary" => Self::Summary,
+            "sup" => Self::Sup,
+            "svg" => Self::Svg,
+            "table" => Self::Table,
+            "tbody" => Self::Tbody,
+            "td" => Self::Td,
+            "template" => Self::Template,
+            "textarea" => Self::Textarea,
+            "tfoot" => Self::Tfoot,
+            "th" => Self::Th,
+            "thead" => Self::Thead,
+            "time" => Self::Time,
+            "title" => Self::Title,
+            "tr" => Self::Tr,
+            "track" => Self::Track,
+            "tt" => Self::Tt,
+            "u" => Self::U,
+            "ul" => Self::Ul,
+            "var" => Self::Var,
+            "video" => Self::Video,
+            "wbr" => Self::Wbr,
+            "xmp" => Self::Xmp,
+            _ => Tag::Unknown(input.to_owned()),`
+   .split("\n")
+   .map((line) => {
+      /**@type {[string, string]} */ //@ts-ignore
+      const match = line.trim().split("=> Self::");
+      return match;
+   })
+   .forEach((tuple) => {
+      tuple[1] = tuple[1]?.slice(0, -1);
+      //   console.log(
+      //      `${tuple[0]} => Self::${tuple[1]}(Element::in_document(Tag::${tuple[1]}, is_html, weak_ref)),`
+      //   );
 
-function generateFiles() {
-   let text = fs
-      .readFileSync("crates/dom/scripts/HTML.TXT")
-      .toString()
-      .split(/\n/g)
-      .map((self) => self.trim());
+      //   console.log(`${tuple[1]}(Element),`);
 
-   let set = new Set();
-
-   for (const line of text) {
-      if (line.startsWith("//")) {
-         continue;
-      }
-      let [name, value] = line.split(":");
-      if (value && value.trim().slice(-1) !== "HTMLElement")) {
-         let v = value.trim().slice(4, -8).toLowerCase();
-         if (v.length) {
-            let x = "html_" + v + "_Element");
-            set.add(x);
-         }
-      }
-   }
-
-   return set;
-}
-
-function generateData() {
-   let basePath = "crates/dom/scripts/generated";
-   fs.readdirSync(basePath).forEach((file) => {
-      let structName = `HTML${file
-         .split(".")[0]
-         .split("_")
-         .slice(1)
-         .map((word) => word[0].toUpperCase() + word.slice(1))
-         .join("")}`;
-      fs.writeFileSync(
-         `${basePath}/${file}`,
-         `
-use crate::{
-    tag::Tag, AsChildNode, AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode,
-    DOMException, HTMLElement, InnerHtml,
-};
-pub struct ${structName} {
-    value: HTMLElement,
-}
-
-impl AsHTMLElement for ${structName} {
-    fn cast(&self) -> &HTMLElement {
-        &self.value
-    }
-
-    fn cast_mut(&mut self) -> &mut HTMLElement {
-        &mut self.value
-    }
-}
-impl AsElement for ${structName} {
-    fn cast(&self) -> &crate::Element {
-        AsElement::cast(&self.value)
-    }
-
-    fn cast_mut(&mut self) -> &mut crate::Element {
-        AsElement::cast_mut(&mut self.value)
-    }
-}
-impl InnerHtml for ${structName} {
-    fn inner_html(&self) -> String {
-        todo!()
-    }
-
-    fn set_inner_html(&mut self, value: &str) -> Result<(), DOMException> {
-        todo!()
-    }
-}
-impl AsParentNode for ${structName} {}
-impl AsChildNode for ${structName} {}
-impl AsNode for ${structName} {
-    fn cast(&self) -> &crate::Node {
-        AsNode::cast(&self.value)
-    }
-
-    fn cast_mut(&mut self) -> &mut crate::Node {
-        AsNode::cast_mut(&mut self.value)
-    }
-
-    fn node_name(&self) -> String {
-        self.value.tag_name()
-    }
-
-    fn clone_node(&self, deep: bool) -> Self {
-        ${structName} {
-            value: self.value.clone_node(deep),
-        }
-    }
-}
-impl<T: AsNode> PartialEq<T> for ${structName} {
-    fn eq(&self, other: &T) -> bool {
-        AsNode::cast(self) == other
-    }
-}
-impl AsEventTarget for ${structName} {
-    fn cast(&self) -> &crate::EventTarget {
-        AsEventTarget::cast(&self.value)
-    }
-
-    fn cast_mut(&mut self) -> &mut crate::EventTarget {
-        AsEventTarget::cast_mut(&mut self.value)
-    }
-}
-
-impl TryFrom<HTMLElement> for ${structName} {
-    type Error = DOMException;
-
-    fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
-let tag = value.tag();
-        if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
-            Ok(${structName} { value })
-        } else {
-            Err(DOMException::TypeError(format!("Cannot convert element with tag {tag} to an  ${structName}",
-            ))
-        }
-    }
-}`
-      );
+      console.log(`Self::${tuple[1]}(element) |`);
    });
-}
-
-function importModules() {
-   let folder = "crates/dom/src/html_Element");
-   /**@type {string[]} */
-   let modules = [];
-   fs.readdirSync(folder).forEach((file) => {
-      if (file !== "mod.rs") {
-         modules.push(file.split(".")[0]);
-      }
-   });
-   let base = `${folder}/mod.rs`;
-   let prevdata = fs.readFileSync(base).toString();
-   let data = modules.map((m) => `mod ${m};\n`).join("");
-   fs.writeFileSync(base, data + prevdata);
-}
-
-importModules();

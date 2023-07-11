@@ -4,7 +4,8 @@ use std::{
 };
 
 use crate::{
-    document::WeakDocumentRef, element::ElementBase, AsEventTarget, AsNode, Element, Node,
+    document::WeakDocumentRef, element::ElementBase, node::NodeType, AsEventTarget, AsNode,
+    Element, Node,
 };
 
 /// A DOM element's attribute.
@@ -28,7 +29,7 @@ impl Attr {
     /// Create a new attribute in a document.
     pub(crate) fn in_document(local_name: &str, weak_ref: WeakDocumentRef) -> Attr {
         Self {
-            node: Node::in_document(2, weak_ref),
+            node: Node::in_document(NodeType::AttributeNode, weak_ref),
             __name: local_name.to_owned(),
             namespace_uri: None,
             owner_element_ref: None,
@@ -112,10 +113,6 @@ impl AsNode for Attr {
 
     fn cast_mut(&mut self) -> &mut crate::Node {
         &mut self.node
-    }
-
-    fn node_name(&self) -> String {
-        self.name().to_owned()
     }
 
     #[allow(deprecated)]

@@ -1,4 +1,5 @@
 // #[warn(unused)]
+mod base;
 mod html_anchor_element;
 mod html_area_element;
 mod html_audio_element;
@@ -136,14 +137,11 @@ pub use html_title_element::HTMLTitleElement;
 pub use html_ulist_element::HTMLUlistElement;
 pub use html_unknown_element::HTMLUnknownElement;
 pub use html_video_element::HTMLVideoElement;
+
+pub(crate) use base::HTMLElementBase;
+
 use std::{any::Any, cell::RefCell, rc::Rc};
 use unicode_bidi::{bidi_class, BidiClass};
-
-#[derive(Debug)]
-pub(crate) struct HTMLElementBase {
-    pub(crate) element: Element,
-    value: String,
-}
 
 /// Any HTML element. Some elements directly implement this interface, while others implement it via an interface that inherits it.
 ///
@@ -161,7 +159,7 @@ impl Drop for HTMLElement {
 
             document.drop_node(AsNode::cast(self).get_base_ptr());
             debug_assert!(document
-                .lookup_node(AsNode::cast(self).get_base_ptr())
+                .lookup_html_element(AsNode::cast(self).get_base_ptr())
                 .is_none())
         }
     }
@@ -187,10 +185,7 @@ impl HTMLElement {
 
     pub(crate) fn in_document(tagname: &str, weak_ref: WeakDocumentRef) -> Self {
         HTMLElement {
-            inner: Rc::new(RefCell::new(HTMLElementBase {
-                element: Element::in_document(tagname, true, weak_ref),
-                value: String::new(),
-            })),
+            inner: Rc::new(RefCell::new(HTMLElementBase::create(tagname, weak_ref))),
         }
     }
 
@@ -200,18 +195,25 @@ impl HTMLElement {
         }
     }
 
+    pub(crate) fn element(&self) -> &Element {
+        self.inner().element()
+    }
+    pub(crate) fn element_mut(&mut self) -> &mut Element {
+        self.inner().element_mut()
+    }
+
     pub(crate) fn tag(&self) -> &Tag {
-        &(unsafe { &*self.inner().element.inner_ref.as_ptr() }).tag
+        &(unsafe { &*self.element().inner_ref.as_ptr() }).tag
     }
 }
 
 impl AsElement for HTMLElement {
     fn cast(&self) -> &Element {
-        &self.inner().element
+        self.element()
     }
 
     fn cast_mut(&mut self) -> &mut Element {
-        &mut self.inner().element
+        self.element_mut()
     }
 }
 
@@ -238,16 +240,7 @@ impl AsNode for HTMLElement {
     }
 
     fn clone_node(&self, deep: bool) -> Self {
-        HTMLElement {
-            inner: Rc::new(RefCell::new(HTMLElementBase {
-                element: self.inner().element.clone_node(deep),
-                value: String::new(),
-            })),
-        }
-    }
-
-    fn node_name(&self) -> String {
-        self.tag_name()
+        todo!()
     }
 }
 
@@ -287,7 +280,6 @@ pub trait AsHTMLElement: AsElement {
     /// MDN Reference: [HTMLElement.accessKey](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/accessKey)
     fn set_access_key(&mut self, value: &str) {
         self.set_attribute("accesskey", value);
-        todo!()
     }
     /// Returns a string with this element's assigned key.
     ///

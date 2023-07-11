@@ -3,7 +3,7 @@ use crate::{
     DOMException, HTMLElement, InnerHtml,
 };
 pub struct HTMLDListElement {
-    value: HTMLElement,
+    html_element: HTMLElement,
 }
 
 impl HTMLDListElement {
@@ -19,20 +19,20 @@ impl HTMLDListElement {
 
 impl AsHTMLElement for HTMLDListElement {
     fn cast(&self) -> &HTMLElement {
-        &self.value
+        &self.html_element
     }
 
     fn cast_mut(&mut self) -> &mut HTMLElement {
-        &mut self.value
+        &mut self.html_element
     }
 }
 impl AsElement for HTMLDListElement {
     fn cast(&self) -> &crate::Element {
-        AsElement::cast(&self.value)
+        AsElement::cast(&self.html_element)
     }
 
     fn cast_mut(&mut self) -> &mut crate::Element {
-        AsElement::cast_mut(&mut self.value)
+        AsElement::cast_mut(&mut self.html_element)
     }
 }
 impl InnerHtml for HTMLDListElement {
@@ -48,20 +48,16 @@ impl AsParentNode for HTMLDListElement {}
 impl AsChildNode for HTMLDListElement {}
 impl AsNode for HTMLDListElement {
     fn cast(&self) -> &crate::Node {
-        AsNode::cast(&self.value)
+        AsNode::cast(&self.html_element)
     }
 
     fn cast_mut(&mut self) -> &mut crate::Node {
-        AsNode::cast_mut(&mut self.value)
-    }
-
-    fn node_name(&self) -> String {
-        self.value.tag_name()
+        AsNode::cast_mut(&mut self.html_element)
     }
 
     fn clone_node(&self, deep: bool) -> Self {
         HTMLDListElement {
-            value: self.value.clone_node(deep),
+            html_element: self.html_element.clone_node(deep),
         }
     }
 }
@@ -72,11 +68,11 @@ impl<T: AsNode> PartialEq<T> for HTMLDListElement {
 }
 impl AsEventTarget for HTMLDListElement {
     fn cast(&self) -> &crate::EventTarget {
-        AsEventTarget::cast(&self.value)
+        AsEventTarget::cast(&self.html_element)
     }
 
     fn cast_mut(&mut self) -> &mut crate::EventTarget {
-        AsEventTarget::cast_mut(&mut self.value)
+        AsEventTarget::cast_mut(&mut self.html_element)
     }
 }
 
@@ -85,8 +81,10 @@ impl TryFrom<HTMLElement> for HTMLDListElement {
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
         let tag = value.tag();
-        if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
-            Ok(HTMLDListElement { value })
+        if matches!(value.element().inner_ref.borrow().tag, Tag::A) {
+            Ok(HTMLDListElement {
+                html_element: value,
+            })
         } else {
             Err(DOMException::TypeError(format!(
                 "Cannot convert element with tag {tag} to an  HTMLDlistElement"

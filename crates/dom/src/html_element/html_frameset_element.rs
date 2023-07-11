@@ -5,7 +5,7 @@ use crate::{
 
 #[deprecated]
 pub struct HTMLFramesetElement {
-    value: HTMLElement,
+    html_element: HTMLElement,
 }
 
 impl HTMLFramesetElement {
@@ -26,21 +26,21 @@ impl HTMLFramesetElement {
 impl WindowEventHandlers for HTMLFramesetElement {}
 impl AsHTMLElement for HTMLFramesetElement {
     fn cast(&self) -> &HTMLElement {
-        &self.value
+        &self.html_element
     }
 
     fn cast_mut(&mut self) -> &mut HTMLElement {
-        &mut self.value
+        &mut self.html_element
     }
 }
 
 impl AsElement for HTMLFramesetElement {
     fn cast(&self) -> &crate::Element {
-        AsElement::cast(&self.value)
+        AsElement::cast(&self.html_element)
     }
 
     fn cast_mut(&mut self) -> &mut crate::Element {
-        AsElement::cast_mut(&mut self.value)
+        AsElement::cast_mut(&mut self.html_element)
     }
 }
 impl InnerHtml for HTMLFramesetElement {
@@ -56,20 +56,16 @@ impl AsParentNode for HTMLFramesetElement {}
 impl AsChildNode for HTMLFramesetElement {}
 impl AsNode for HTMLFramesetElement {
     fn cast(&self) -> &crate::Node {
-        AsNode::cast(&self.value)
+        AsNode::cast(&self.html_element)
     }
 
     fn cast_mut(&mut self) -> &mut crate::Node {
-        AsNode::cast_mut(&mut self.value)
-    }
-
-    fn node_name(&self) -> String {
-        self.value.tag_name()
+        AsNode::cast_mut(&mut self.html_element)
     }
 
     fn clone_node(&self, deep: bool) -> Self {
         HTMLFramesetElement {
-            value: self.value.clone_node(deep),
+            html_element: self.html_element.clone_node(deep),
         }
     }
 }
@@ -80,11 +76,11 @@ impl<T: AsNode> PartialEq<T> for HTMLFramesetElement {
 }
 impl AsEventTarget for HTMLFramesetElement {
     fn cast(&self) -> &crate::EventTarget {
-        AsEventTarget::cast(&self.value)
+        AsEventTarget::cast(&self.html_element)
     }
 
     fn cast_mut(&mut self) -> &mut crate::EventTarget {
-        AsEventTarget::cast_mut(&mut self.value)
+        AsEventTarget::cast_mut(&mut self.html_element)
     }
 }
 
@@ -93,8 +89,10 @@ impl TryFrom<HTMLElement> for HTMLFramesetElement {
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
         let tag = value.tag();
-        if matches!(value.inner().element.inner_ref.borrow().tag, Tag::A) {
-            Ok(HTMLFramesetElement { value })
+        if matches!(value.element().inner_ref.borrow().tag, Tag::A) {
+            Ok(HTMLFramesetElement {
+                html_element: value,
+            })
         } else {
             Err(DOMException::TypeError(format!(
                 "Cannot convert element with tag {tag} to an  HTMLFramesetElement"
