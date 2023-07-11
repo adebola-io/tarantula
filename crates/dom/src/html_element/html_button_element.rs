@@ -161,7 +161,7 @@ impl TryFrom<HTMLElement> for HTMLButtonElement {
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
         let tag = value.tag();
-        if matches!(value.element().inner_ref.borrow().tag, Tag::Button) {
+        if matches!(value.element().base.borrow().tag, Tag::Button) {
             Ok(HTMLButtonElement {
                 html_element: value,
             })

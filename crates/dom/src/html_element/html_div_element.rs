@@ -87,7 +87,7 @@ impl TryFrom<HTMLElement> for HTMLDivElement {
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
         let tag = value.tag();
-        if matches!(value.element().inner_ref.borrow().tag, Tag::Div) {
+        if matches!(value.element().base.borrow().tag, Tag::Div) {
             Ok(HTMLDivElement {
                 html_element: value,
             })

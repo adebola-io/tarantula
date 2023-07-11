@@ -71,8 +71,8 @@ mod html_unknown_element;
 mod html_video_element;
 
 use crate::{
-    document::WeakDocumentRef, tag::Tag, AsChildNode, AsElement, AsEventTarget, AsNode,
-    AsParentNode, Element, Event, InnerHtml, Node, TimeRanges,
+    document::WeakDocumentRef, domitem::DOMItem, tag::Tag, AsChildNode, AsElement, AsEventTarget,
+    AsNode, AsParentNode, Element, Event, InnerHtml, Node, TimeRanges,
 };
 pub use html_anchor_element::HTMLAnchorElement;
 pub use html_area_element::HTMLAreaElement;
@@ -148,13 +148,13 @@ use unicode_bidi::{bidi_class, BidiClass};
 /// MDN Reference: [`HTMLElement`](https://developer.mozilla.org/docs/Web/API/HTMLElement)
 #[derive(Debug)]
 pub struct HTMLElement {
-    pub(crate) inner: Rc<RefCell<HTMLElementBase>>,
+    pub(crate) base: Rc<RefCell<HTMLElementBase>>,
 }
 
 impl Drop for HTMLElement {
     fn drop(&mut self) {
         // Disconnect node from document.
-        if self.parent_node().is_none() && Rc::strong_count(&self.inner) == 2 {
+        if self.parent_node().is_none() && Rc::strong_count(&self.base) == 2 {
             let mut document = self.owner_document().unwrap();
 
             document.drop_node(AsNode::cast(self).get_base_ptr());
@@ -171,11 +171,19 @@ impl<T: AsNode> PartialEq<T> for HTMLElement {
     }
 }
 
-impl HTMLElement {
-    fn inner(&self) -> &mut HTMLElementBase {
-        unsafe { &mut *self.inner.as_ptr() }
+impl DOMItem<HTMLElementBase> for HTMLElement {
+    fn clone_ref(&self) -> Self {
+        HTMLElement {
+            base: self.base.clone(),
+        }
     }
 
+    fn base(&self) -> &mut HTMLElementBase {
+        unsafe { &mut *self.base.as_ptr() }
+    }
+}
+
+impl HTMLElement {
     fn is_document_element(&self) -> bool {
         if let Some(parent) = self.parent_node() {
             return parent == self.owner_document().unwrap();
@@ -185,25 +193,19 @@ impl HTMLElement {
 
     pub(crate) fn in_document(tagname: &str, weak_ref: WeakDocumentRef) -> Self {
         HTMLElement {
-            inner: Rc::new(RefCell::new(HTMLElementBase::create(tagname, weak_ref))),
-        }
-    }
-
-    pub fn clone_ref(&self) -> HTMLElement {
-        HTMLElement {
-            inner: self.inner.clone(),
+            base: Rc::new(RefCell::new(HTMLElementBase::create(tagname, weak_ref))),
         }
     }
 
     pub(crate) fn element(&self) -> &Element {
-        self.inner().element()
+        self.base().element()
     }
     pub(crate) fn element_mut(&mut self) -> &mut Element {
-        self.inner().element_mut()
+        self.base().element_mut()
     }
 
     pub(crate) fn tag(&self) -> &Tag {
-        &(unsafe { &*self.element().inner_ref.as_ptr() }).tag
+        &(unsafe { &*self.element().base.as_ptr() }).tag
     }
 }
 

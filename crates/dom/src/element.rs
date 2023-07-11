@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::{
-    document::DocumentBase, dom_token_list::ListType, node::NodeType, tag::Tag, AsChildNode,
-    AsDocument, AsEventTarget, AsNode, AsParentNode, Attr, DOMException, DOMTokenList,
+    document::DocumentBase, dom_token_list::ListType, domitem::DOMItem, node::NodeType, tag::Tag,
+    AsChildNode, AsDocument, AsEventTarget, AsNode, AsParentNode, Attr, DOMException, DOMTokenList,
     HTMLCollection, HTMLCollectionOf, InnerHtml, MutDOMTokenList, NamedNodeMap, Node,
 };
 
@@ -33,7 +33,7 @@ pub(super) struct ElementBase {
 /// Element is the most general base class from which all objects in a Document inherit. It only has methods and properties common to all kinds of elements. More specific classes inherit from Element.
 #[derive(Debug)]
 pub struct Element {
-    pub(crate) inner_ref: Rc<RefCell<ElementBase>>,
+    pub(crate) base: Rc<RefCell<ElementBase>>,
 }
 
 impl<T: AsNode> PartialEq<T> for Element {
@@ -43,15 +43,6 @@ impl<T: AsNode> PartialEq<T> for Element {
 }
 
 impl Element {
-    fn inner(&self) -> &mut ElementBase {
-        unsafe { &mut *self.inner_ref.as_ptr() }
-    }
-    /// Create a new Element that references the same base.
-    pub(crate) fn clone_ref(&self) -> Self {
-        Self {
-            inner_ref: self.inner_ref.clone(),
-        }
-    }
     /// Search the descendants of this element for elements that have a set of class names.
     pub(crate) fn class_search(&self, class_names: &str) -> Vec<Element> {
         let mut matches = vec![];
@@ -70,7 +61,7 @@ impl Element {
     pub(crate) fn tag_search(&self, tag: &Tag) -> Vec<Element> {
         let mut matches = vec![];
         for child in self.children() {
-            if matches!(&child.inner().tag, tag) {
+            if matches!(&child.base().tag, tag) {
                 matches.push(child.clone_ref())
             }
             matches.append(&mut child.tag_search(tag))
@@ -84,36 +75,36 @@ impl Element {
         weak_ref: crate::document::WeakDocumentRef,
     ) -> Element {
         let element = Self {
-            inner_ref: Rc::new(RefCell::new(ElementBase {
+            base: Rc::new(RefCell::new(ElementBase {
                 attributes: None,
                 is_html,
                 node: Node::in_document(NodeType::ElementNode, weak_ref),
                 tag,
             })),
         };
-        element.inner().attributes = Some(NamedNodeMap {
-            owner_element: Rc::downgrade(&element.inner_ref),
+        element.base().attributes = Some(NamedNodeMap {
+            owner_element: Rc::downgrade(&element.base),
             items: vec![],
         });
         element
     }
 
     pub(crate) fn is_html(&self) -> bool {
-        self.inner().is_html
+        self.base().is_html
     }
 
     /// Create an element from a base.
     pub(crate) fn with_base(inner_ref: Rc<RefCell<ElementBase>>) -> Element {
-        Self { inner_ref }
+        Self { base: inner_ref }
     }
 
     pub(crate) fn as_weak_ref(&self) -> Weak<RefCell<ElementBase>> {
-        Rc::downgrade(&self.inner_ref)
+        Rc::downgrade(&self.base)
     }
 
     // /// Unsafe shenanigans. Returns a mutable reference to the base of the document in which this element is defined.
     // unsafe fn document_mut_ref(&self) -> &mut DocumentBase {
-    //     &mut *((*self.inner().node.inner.as_ptr())
+    //     &mut *((*self.base().node.inner.as_ptr())
     //         .owner_document
     //         .as_mut()
     //         .unwrap()
@@ -124,34 +115,46 @@ impl Element {
     // }
 }
 
+impl DOMItem<ElementBase> for Element {
+    fn clone_ref(&self) -> Self {
+        Element {
+            base: self.base.clone(),
+        }
+    }
+
+    fn base(&self) -> &mut ElementBase {
+        unsafe { &mut *self.base.as_ptr() }
+    }
+}
+
 impl AsEventTarget for Element {
     fn cast(&self) -> &crate::EventTarget {
-        AsEventTarget::cast(&self.inner().node)
+        AsEventTarget::cast(&self.base().node)
     }
 
     fn cast_mut(&mut self) -> &mut crate::EventTarget {
-        AsEventTarget::cast_mut(&mut self.inner().node)
+        AsEventTarget::cast_mut(&mut self.base().node)
     }
 }
 impl AsNode for Element {
     fn cast(&self) -> &Node {
-        &self.inner().node
+        &self.base().node
     }
     fn cast_mut(&mut self) -> &mut Node {
-        &mut self.inner().node
+        &mut self.base().node
     }
 
     fn clone_node(&self, deep: bool) -> Self {
         let mut element = Element {
-            inner_ref: Rc::new(RefCell::new(ElementBase {
-                node: self.inner().node.clone_node(deep),
-                is_html: self.inner().is_html,
+            base: Rc::new(RefCell::new(ElementBase {
+                node: self.base().node.clone_node(deep),
+                is_html: self.base().is_html,
                 attributes: None,
-                tag: self.inner().tag.clone(),
+                tag: self.base().tag.clone(),
             })),
         };
-        element.inner().attributes = Some(NamedNodeMap {
-            owner_element: Rc::downgrade(&element.inner_ref),
+        element.base().attributes = Some(NamedNodeMap {
+            owner_element: Rc::downgrade(&element.base),
             items: vec![],
         });
         for attr in self.attributes().iter() {
@@ -191,14 +194,14 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     ///
     /// MDN Reference: [`Element.attributes`](https://developer.mozilla.org/en-US/docs/Web/API/Element/attributes).
     fn attributes(&self) -> &NamedNodeMap {
-        AsElement::cast(self).inner().attributes.as_ref().unwrap()
+        AsElement::cast(self).base().attributes.as_ref().unwrap()
     }
     /// Returns a mutable reference to a [`NamedNodeMap`] containing the assigned attributes of the corresponding HTML element.
     ///
     /// MDN Reference: [`Element.attributes`](https://developer.mozilla.org/en-US/docs/Web/API/Element/attributes).
     fn attributes_mut(&mut self) -> &mut NamedNodeMap {
         AsElement::cast_mut(self)
-            .inner()
+            .base()
             .attributes
             .as_mut()
             .unwrap()
@@ -447,7 +450,7 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     fn tag_name(&self) -> String {
         let element = AsElement::cast(self);
         if element.is_html() {
-            element.inner().tag.to_uppercase()
+            element.base().tag.to_uppercase()
         } else {
             todo!()
         }
@@ -486,7 +489,7 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// ```
     fn get_attribute(&self, qualified_name: &str) -> Option<&str> {
         let element = AsElement::cast(self);
-        if matches!(element.inner().tag, Tag::Script) && qualified_name == "nonce" {
+        if matches!(element.base().tag, Tag::Script) && qualified_name == "nonce" {
             return Some("");
         }
         let mut qualified_name = qualified_name;

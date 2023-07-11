@@ -61,7 +61,9 @@ impl Attr {
     /// [MDN Reference](https://developer.mozilla.org/docs/Web/API/Attr/ownerElement)
     pub fn owner_element(&self) -> Option<Element> {
         if let Some(weak_ref) = &self.owner_element_ref {
-            weak_ref.upgrade().map(|inner_ref| Element { inner_ref })
+            weak_ref
+                .upgrade()
+                .map(|inner_ref| Element { base: inner_ref })
         } else {
             None
         }

@@ -5,6 +5,7 @@ mod document;
 mod document_type;
 mod dom_token_list;
 mod domexception;
+mod domitem;
 mod element;
 mod event;
 mod event_target;

@@ -5,6 +5,7 @@ use std::{
 };
 
 use crate::{
+    domitem::DOMItem,
     element::ElementBase,
     html_collection::{LiveCollection, LiveCollectionType},
     node::{NodeBase, NodeType},
@@ -312,7 +313,7 @@ pub trait AsDocument {
         let html_element = HTMLElement::in_document(tagname, weak_ref);
         AsDocument::cast(self).associate_node_with_element(
             AsNode::cast(&html_element).get_base_ptr(),
-            Rc::downgrade(&html_element.inner),
+            Rc::downgrade(&html_element.base),
         );
         html_element
     }

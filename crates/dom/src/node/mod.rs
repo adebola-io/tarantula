@@ -1,5 +1,6 @@
 use crate::{
     document::{DocumentBase, WeakDocumentRef},
+    domitem::DOMItem,
     AsElement, AsEventTarget, DOMException, Document, Element, EventTarget, HTMLCollection,
     HTMLElement, MutNodeListOf, NodeListOf,
 };
@@ -81,7 +82,7 @@ impl PartialEq for WeakNodeRef {
 impl<T: AsNode> From<&T> for WeakNodeRef {
     fn from(node: &T) -> Self {
         WeakNodeRef {
-            inner: Rc::downgrade(&AsNode::cast(node).inner),
+            inner: Rc::downgrade(&AsNode::cast(node).base),
         }
     }
 }
@@ -89,23 +90,23 @@ impl<T: AsNode> From<&T> for WeakNodeRef {
 /// Node is an interface from which a number of DOM API object types inherit. It allows those types to be treated similarly; for example, inheriting the same set of methods, or being tested in the same way.
 #[derive(Debug)]
 pub struct Node {
-    pub(crate) inner: Rc<RefCell<NodeBase>>,
+    pub(crate) base: Rc<RefCell<NodeBase>>,
 }
 
 impl<T: AsNode> PartialEq<T> for Node {
     fn eq(&self, other: &T) -> bool {
-        Rc::ptr_eq(&self.inner, &AsNode::cast(other).inner)
+        Rc::ptr_eq(&self.base, &AsNode::cast(other).base)
     }
 }
 
 impl Node {
     /// Returns the position of self in its parent, if it has one.
     fn index(&self) -> Option<usize> {
-        self.inner.borrow().parent.as_ref().map(|tuple| tuple.1)
+        self.base().parent.as_ref().map(|tuple| tuple.1)
     }
 
     fn set_index(&mut self, index: usize) {
-        self.inner
+        self.base
             .borrow_mut()
             .parent
             .as_mut()
@@ -122,7 +123,7 @@ impl Node {
     }
 
     fn set_parent(&mut self, parent: Option<(WeakNodeRef, usize)>) {
-        self.inner.borrow_mut().parent = parent;
+        self.base().parent = parent;
     }
 
     fn is_appendable(&self) -> bool {
@@ -134,13 +135,13 @@ impl Node {
     }
 
     pub(crate) unsafe fn document_base(&self) -> &DocumentBase {
-        &(*(*{ &*self.inner.as_ptr() }.owner_document.inner.as_ptr()).as_ptr())
+        &(*(*self.base().owner_document.inner.as_ptr()).as_ptr())
     }
 
     /// Create a node inside a document.
     pub(crate) fn in_document(node_type: NodeType, weak_ref: WeakDocumentRef) -> Self {
         Self {
-            inner: Rc::new(RefCell::new(NodeBase {
+            base: Rc::new(RefCell::new(NodeBase {
                 node_type,
                 event_target: EventTarget::new(),
                 owner_document: weak_ref,
@@ -152,7 +153,7 @@ impl Node {
     }
     /// Returns a raw pointer to the underlying node base.
     pub(crate) fn get_base_ptr(&self) -> *mut NodeBase {
-        self.inner.as_ptr()
+        self.base.as_ptr()
     }
 
     /// Inner implementation of `remove()`.
@@ -184,7 +185,7 @@ impl Node {
         if new_child.node_type() == Self::DOCUMENT_FRAGMENT_NODE {
             let children = new_child.child_nodes_mut();
             while !children.items.is_empty() {
-                let reference_node = unsafe { &mut *(self.inner.as_ptr()) }
+                let reference_node = unsafe { &mut *(self.base.as_ptr()) }
                     .children
                     .get_mut(index);
                 self.__insert_before(&mut children.items.remove(0), reference_node)?;
@@ -268,8 +269,7 @@ impl Node {
         // Disconnect from old parent.
         AsNode::cast_mut(&mut new_child).__remove();
 
-        AsNode::cast_mut(&mut new_child)
-            .set_parent(old_child_as_node.inner.borrow_mut().parent.take());
+        AsNode::cast_mut(&mut new_child).set_parent(old_child_as_node.base().parent.take());
         self.child_nodes_mut().items[index] = new_child;
 
         Ok(old_child)
@@ -307,11 +307,17 @@ impl Node {
         }
         Ok(child)
     }
+}
 
-    fn clone_ref(&self) -> Node {
+impl DOMItem<NodeBase> for Node {
+    fn clone_ref(&self) -> Self {
         Self {
-            inner: self.inner.clone(),
+            base: self.base.clone(),
         }
+    }
+
+    fn base(&self) -> &mut NodeBase {
+        unsafe { &mut *self.base.as_ptr() }
     }
 }
 
@@ -326,7 +332,7 @@ impl AsNode for Node {
     }
     fn clone_node(&self, deep: bool) -> Self {
         let noderef = helpers::clone_node(AsNode::cast(self), deep);
-        noderef.inner.borrow_mut().parent = None;
+        noderef.base().parent = None;
         noderef
     }
 }
@@ -334,11 +340,11 @@ impl AsNode for Node {
 impl AsEventTarget for Node {
     #[inline(always)]
     fn cast(&self) -> &EventTarget {
-        unsafe { &(*self.inner.as_ptr()).event_target }
+        &self.base().event_target
     }
     #[inline(always)]
     fn cast_mut(&mut self) -> &mut EventTarget {
-        unsafe { &mut (*self.inner.as_ptr()).event_target }
+        &mut self.base().event_target
     }
 }
 
@@ -365,7 +371,7 @@ pub trait AsNode: AsEventTarget {
     ///
     /// MDN Reference: [`Node.nodeType`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeType).
     fn node_type(&self) -> u8 {
-        AsNode::cast(self).inner.borrow_mut().node_type as u8
+        AsNode::cast(self).base().node_type as u8
     }
     /// Returns a string containing the name of the Node.
     ///
@@ -374,7 +380,7 @@ pub trait AsNode: AsEventTarget {
     /// MDN Reference: [`Node.nodeName`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeName)
     fn node_name(&self) -> String {
         let node_type = self.node_type();
-        match AsNode::cast(self).inner.borrow().node_type {
+        match AsNode::cast(self).base().node_type {
             NodeType::ElementNode => self
                 .owner_document()
                 .expect("Could not find document for node")
@@ -414,8 +420,7 @@ pub trait AsNode: AsEventTarget {
             return None;
         }
         AsNode::cast(self)
-            .inner
-            .borrow()
+            .base()
             .owner_document
             .inner
             .upgrade()
@@ -427,9 +432,9 @@ pub trait AsNode: AsEventTarget {
     }
     /// Returns the parent.
     fn parent_node(&self) -> Option<ParentNode> {
-        match &AsNode::cast(self).inner.borrow().parent {
+        match &AsNode::cast(self).base().parent {
             Some(tuple) => tuple.0.inner.upgrade().map(|inner| ParentNode {
-                inner: Node { inner },
+                inner: Node { base: inner },
             }),
             _ => None,
         }
@@ -462,7 +467,7 @@ pub trait AsNode: AsEventTarget {
     /// MDN Reference: [`Node.childNodes`](https://developer.mozilla.org/en-US/docs/Web/API/Node/childNodes)
     fn child_nodes(&self) -> NodeListOf<ChildNode> {
         NodeListOf {
-            items: unsafe { &(*AsNode::cast(self).inner.as_ptr()).children },
+            items: &AsNode::cast(self).base().children,
         }
     }
     /// Returns a MutNodeList containing all the children of this node (including elements, text and comments).
@@ -471,7 +476,7 @@ pub trait AsNode: AsEventTarget {
     /// MDN Reference: [`Node.childNodes`](https://developer.mozilla.org/en-US/docs/Web/API/Node/childNodes)
     fn child_nodes_mut(&mut self) -> MutNodeListOf<ChildNode> {
         MutNodeListOf {
-            items: unsafe { &mut (*AsNode::cast(self).inner.as_ptr()).children },
+            items: &mut AsNode::cast(self).base().children,
         }
     }
     /// Returns a [`ChildNode`] representing the first direct child node of the node, or None if the node has no child.
@@ -490,7 +495,7 @@ pub trait AsNode: AsEventTarget {
     ///
     /// MDN Reference: [`Node.previousSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/previousSibling)
     fn previous_sibling(&self) -> Option<ChildNode> {
-        if let Some(tuple) = &AsNode::cast(self).inner.borrow().parent {
+        if let Some(tuple) = &AsNode::cast(self).base().parent {
             if tuple.1 == 0 {
                 None
             } else {
@@ -504,7 +509,7 @@ pub trait AsNode: AsEventTarget {
     ///
     /// MDN Reference: [`Node.nextSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nextSibling)
     fn next_sibling(&self) -> Option<ChildNode> {
-        match &AsNode::cast(self).inner.borrow().parent {
+        match &AsNode::cast(self).base().parent {
             Some(tuple) => Some(helpers::get_node_at_index(&tuple.0, tuple.1 + 1)?.clone_ref()),
             _ => None,
         }
@@ -513,7 +518,7 @@ pub trait AsNode: AsEventTarget {
     ///
     /// MDN Reference: [Node.nodeValue]{https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeValue)
     fn node_value(&self) -> Option<&str> {
-        match AsNode::cast(self).inner.borrow().node_type {
+        match AsNode::cast(self).base().node_type {
             NodeType::AttributeNode => todo!(),
             _ => None,
         }
@@ -523,7 +528,7 @@ pub trait AsNode: AsEventTarget {
     /// MDN Reference: [Node.nodeValue]{https://developer.mozilla.org/en-US/docs/Web/API/Node/nodeValue)
     fn set_node_value(&mut self, value: Option<&str>) {
         let value = value.unwrap_or("");
-        match AsNode::cast(self).inner.borrow().node_type {
+        match AsNode::cast(self).base().node_type {
             NodeType::AttributeNode => todo!(),
             _ => {}
         }
@@ -649,8 +654,8 @@ pub trait AsNode: AsEventTarget {
     /// assert!(node1.is_equal_node(&node2));
     /// ```
     fn is_equal_node(&self, other_node: &impl AsNode) -> bool {
-        let inner_node = AsNode::cast(self).inner.borrow();
-        let other_inner_node = AsNode::cast(other_node).inner.borrow();
+        let inner_node = AsNode::cast(self).base();
+        let other_inner_node = AsNode::cast(other_node).base();
         *inner_node == *other_inner_node
     }
     /// Returns a boolean value indicating whether or not the two nodes are the same (that is, they reference the same object).
@@ -816,7 +821,7 @@ pub trait AsParentNode: AsNode {
     /// Returns the number of children of this node that are elements.
     fn child_element_count(&self) -> usize {
         AsNode::cast(self)
-            .inner
+            .base
             .borrow()
             .children
             .iter()
@@ -922,7 +927,7 @@ impl<T: AsNode> From<&T> for ChildNode {
     fn from(node: &T) -> Self {
         ChildNode {
             inner: Node {
-                inner: AsNode::cast(node).inner.clone(),
+                base: AsNode::cast(node).base.clone(),
             },
         }
     }
@@ -1003,7 +1008,9 @@ pub trait AsChildNode: AsNode {
 mod helpers {
     use std::{cell::RefCell, rc::Rc};
 
-    use crate::{node::NodeBase, node::WeakNodeRef, AsNode, ChildNode, DOMException, Node};
+    use crate::{
+        domitem::DOMItem, node::NodeBase, node::WeakNodeRef, AsNode, ChildNode, DOMException, Node,
+    };
 
     pub fn validate_hierarchy<T: AsNode, U: AsNode>(
         parent: &T,
@@ -1064,10 +1071,10 @@ mod helpers {
 
     /// Create a copy of a node still attached to the parent node.
     pub fn clone_node<T: AsNode>(noderef: &T, deep: bool) -> Node {
-        let inner_node = AsNode::cast(noderef).inner.borrow();
+        let inner_node = AsNode::cast(noderef).base();
         if deep {
             Node {
-                inner: Rc::new(RefCell::new(NodeBase {
+                base: Rc::new(RefCell::new(NodeBase {
                     node_type: inner_node.node_type,
                     event_target: crate::EventTarget::new(),
                     owner_document: inner_node.owner_document.clone(),
@@ -1085,7 +1092,7 @@ mod helpers {
             }
         } else {
             Node {
-                inner: Rc::new(RefCell::new(NodeBase {
+                base: Rc::new(RefCell::new(NodeBase {
                     node_type: inner_node.node_type,
                     event_target: crate::EventTarget::new(),
                     owner_document: inner_node.owner_document.clone(),
@@ -1096,7 +1103,7 @@ mod helpers {
                         .iter()
                         .map(|noderef| ChildNode {
                             inner: Node {
-                                inner: noderef.inner.inner.clone(),
+                                base: noderef.inner.base.clone(),
                             },
                         })
                         .collect(),
@@ -1108,13 +1115,15 @@ mod helpers {
 
     /// Get the number of children a node has.
     pub fn get_children_length<T: AsNode>(parent: &T) -> usize {
-        AsNode::cast(parent).inner.borrow().children.len()
+        AsNode::cast(parent).base().children.len()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{node::NodeBase, AsDocument, AsNode, Document, HTMLElement, Node};
+    use crate::{
+        domitem::DOMItem, node::NodeBase, AsDocument, AsNode, Document, HTMLElement, Node,
+    };
     #[test]
     fn parent_child_node_check() {
         let document = Document::new();

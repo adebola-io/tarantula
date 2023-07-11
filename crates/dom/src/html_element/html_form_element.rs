@@ -182,7 +182,7 @@ impl TryFrom<HTMLElement> for HTMLFormElement {
 
     fn try_from(value: HTMLElement) -> Result<Self, Self::Error> {
         let tag = value.tag();
-        if matches!(value.element().inner_ref.borrow().tag, Tag::Form) {
+        if matches!(value.element().base.borrow().tag, Tag::Form) {
             Ok(HTMLFormElement {
                 html_element: value,
             })
