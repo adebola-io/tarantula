@@ -1,6 +1,6 @@
 use std::{
     cell::RefCell,
-    collections::HashMap,
+    collections::{btree_map::IterMut, HashMap},
     rc::{Rc, Weak},
 };
 
@@ -12,7 +12,7 @@ use crate::{
     tag::Tag,
     AsElement, AsEventTarget, AsHTMLElement, AsNode, AsParentNode, Attr, Element,
     HTMLAnchorElement, HTMLCollection, HTMLCollectionOf, HTMLElement, HTMLElementBase,
-    HTMLOrSVGScriptElement, Node,
+    HTMLOrSVGScriptElement, Node, Range,
 };
 
 pub struct HTMLAllCollection;
@@ -21,6 +21,7 @@ pub(crate) struct DocumentBase {
     document_node: Option<Node>,
     pub url: String,
     html_elements: HashMap<*mut NodeBase, Weak<RefCell<HTMLElementBase>>>,
+    ranges: Vec<Range>,
     live_collections: Vec<Weak<RefCell<LiveCollection<Element>>>>,
 }
 
@@ -113,6 +114,7 @@ impl Document {
             url: String::new(),
             html_elements: HashMap::new(),
             live_collections: vec![],
+            ranges: vec![],
         };
         let document = Self {
             inner: Rc::new(RefCell::new(base)),
@@ -229,6 +231,13 @@ impl Document {
 
     pub(crate) fn document_base_url(&self) -> &str {
         todo!()
+    }
+
+    pub(crate) fn live_ranges(&self) -> impl Iterator<Item = &Range> {
+        self.inner().ranges.iter().filter(|range| range.is_live)
+    }
+    pub(crate) fn live_ranges_mut(&mut self) -> impl Iterator<Item = &mut Range> {
+        self.inner().ranges.iter_mut().filter(|range| range.is_live)
     }
 }
 

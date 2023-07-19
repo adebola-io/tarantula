@@ -57,7 +57,7 @@ impl<'a> MutDOMTokenList<'a> {
     /// Returns the number of tokens in the list.
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut div = document.create_element("div");
@@ -75,7 +75,7 @@ impl<'a> MutDOMTokenList<'a> {
     /// Returns true if the list contains a specified token.
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut div = document.create_element("div");
@@ -94,7 +94,7 @@ impl<'a> MutDOMTokenList<'a> {
     /// Returns the token with index `index`
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut div = document.create_element("div");
@@ -114,7 +114,7 @@ impl<'a> MutDOMTokenList<'a> {
     /// - Returns an `InvalidCharacterError` DOMException if the argument contains any ASCII whitespace.
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     ///
@@ -151,7 +151,7 @@ impl<'a> MutDOMTokenList<'a> {
     /// - Returns an `InvalidCharacterError` DOMException if the argument contains any ASCII whitespace.
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut div = document.create_element("div");
@@ -186,7 +186,7 @@ impl<'a> MutDOMTokenList<'a> {
     /// - Returns an `InvalidCharacterError` [`DOMException`] if one of the arguments contains any ASCII whitespace.
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     ///
@@ -235,7 +235,7 @@ impl<'a> MutDOMTokenList<'a> {
     /// # Examples
     /// Toggling without the force flag.
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut a = document.create_element("a");
@@ -254,7 +254,7 @@ impl<'a> MutDOMTokenList<'a> {
     /// Toggling with the flag.<br>
     ///
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut body = document.create_element("body");
@@ -333,7 +333,7 @@ impl<'a> DOMTokenList<'a> {
     /// Returns the number of tokens in the list.
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut div = document.create_element("div");
@@ -351,7 +351,7 @@ impl<'a> DOMTokenList<'a> {
     /// Returns true if the list contains a specified token.
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut div = document.create_element("div");
@@ -370,7 +370,7 @@ impl<'a> DOMTokenList<'a> {
     /// Returns the token with index `index`
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut div = document.create_element("div");

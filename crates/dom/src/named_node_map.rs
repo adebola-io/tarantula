@@ -75,7 +75,7 @@ impl NamedNodeMap {
     ///
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     ///

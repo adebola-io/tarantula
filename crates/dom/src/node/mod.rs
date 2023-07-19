@@ -1,9 +1,16 @@
+mod child_node;
+mod mutation_algorithms;
+mod parent_node;
+mod trees;
+
 use crate::{
     document::{DocumentBase, WeakDocumentRef},
     domitem::DOMItem,
-    AsElement, AsEventTarget, DOMException, Document, Element, EventTarget, HTMLCollection,
-    HTMLElement, MutNodeListOf, NodeListOf,
+    AsElement, AsEventTarget, DOMException, Document, Element, EventTarget, MutNodeListOf,
+    NodeListOf,
 };
+pub use child_node::{AsChildNode, ChildNode};
+pub use parent_node::{AsParentNode, ParentNode};
 use std::{
     cell::RefCell,
     rc::{Rc, Weak},
@@ -449,7 +456,7 @@ pub trait AsNode: AsEventTarget {
     /// MDN Reference: [`Node.hasChildNodes()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/hasChildNodes)
     /// # Example
     /// ```
-    /// use dom::{Document, AsNode};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut node = document.create_element("div");
@@ -479,40 +486,65 @@ pub trait AsNode: AsEventTarget {
             items: &mut AsNode::cast(self).base().children,
         }
     }
-    /// Returns a [`ChildNode`] representing the first direct child node of the node, or None if the node has no child.
+    /// Returns a reference to a [`ChildNode`] representing the first direct child node of the node, or None if the node has no child.
     ///
     /// MDN Reference: [`Node.firstChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/firstChild)
-    fn first_child(&self) -> Option<ChildNode> {
-        Some(self.child_nodes().items.get(0)?.clone_ref())
+    fn first_child(&self) -> Option<&ChildNode> {
+        self.child_nodes().items.get(0)
     }
-    /// Returns a [`ChildNode`] representing the last direct child node of the node, or None if the node has no child.
+    /// Returns a mutable reference to a [`ChildNode`] representing the first direct child node of the node, or None if the node has no child.
+    ///
+    /// MDN Reference: [`Node.firstChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/firstChild)
+    fn first_child_mut(&mut self) -> Option<&mut ChildNode> {
+        self.child_nodes_mut().items.get_mut(0)
+    }
+    /// Returns a reference to a [`ChildNode`] representing the last direct child node of the node, or None if the node has no child.
     ///
     /// MDN Reference: [`Node.lastChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/lasthild)
-    fn last_child(&self) -> Option<ChildNode> {
-        Some(self.child_nodes().items.last()?.clone_ref())
+    fn last_child(&self) -> Option<&ChildNode> {
+        self.child_nodes().items.last()
     }
-    ///  Returns a [`ChildNode`] representing the previous node in the tree, or None if there isn't such node.
+    /// Returns a mutable reference to a [`ChildNode`] representing the last direct child node of the node, or None if the node has no child.
+    ///
+    /// MDN Reference: [`Node.lastChild`](https://developer.mozilla.org/en-US/docs/Web/API/Node/lasthild)
+    fn last_child_mut(&mut self) -> Option<&mut ChildNode> {
+        self.child_nodes_mut().items.last_mut()
+    }
+    ///  Returns a reference to a [`ChildNode`] representing the previous node in the tree, or [`None`] if there isn't such node.
     ///
     /// MDN Reference: [`Node.previousSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/previousSibling)
-    fn previous_sibling(&self) -> Option<ChildNode> {
-        if let Some(tuple) = &AsNode::cast(self).base().parent {
-            if tuple.1 == 0 {
-                None
-            } else {
-                Some(helpers::get_node_at_index(&tuple.0, tuple.1 - 1)?.clone_ref())
-            }
-        } else {
+    fn previous_sibling(&self) -> Option<&ChildNode> {
+        let tuple = AsNode::cast(self).base().parent.as_ref()?;
+        if tuple.1 == 0 {
             None
+        } else {
+            helpers::get_node_at_index(&tuple.0, tuple.1 - 1)
         }
     }
-    /// Returns a [`ChildNode`] representing the next node in the tree, or None if there isn't such node.
+    ///  Returns a mutable reference to a [`ChildNode`] representing the previous node in the tree, or None if there isn't such node.
+    ///
+    /// MDN Reference: [`Node.previousSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/previousSibling)
+    fn previous_sibling_mut(&mut self) -> Option<&mut ChildNode> {
+        let tuple = AsNode::cast(self).base().parent.as_ref()?;
+        if tuple.1 == 0 {
+            None
+        } else {
+            helpers::get_mut_node_at_index(&tuple.0, tuple.1 - 1)
+        }
+    }
+    /// Returns a reference to a [`ChildNode`] representing the next node in the tree, or None if there isn't such node.
     ///
     /// MDN Reference: [`Node.nextSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nextSibling)
-    fn next_sibling(&self) -> Option<ChildNode> {
-        match &AsNode::cast(self).base().parent {
-            Some(tuple) => Some(helpers::get_node_at_index(&tuple.0, tuple.1 + 1)?.clone_ref()),
-            _ => None,
-        }
+    fn next_sibling(&self) -> Option<&ChildNode> {
+        let tuple = AsNode::cast(self).base().parent.as_ref()?;
+        helpers::get_node_at_index(&tuple.0, tuple.1 + 1)
+    }
+    /// Returns a mutable reference to a [`ChildNode`] representing the next node in the tree, or None if there isn't such node.
+    ///
+    /// MDN Reference: [`Node.nextSibing`](https://developer.mozilla.org/en-US/docs/Web/API/Node/nextSibling)
+    fn next_sibling_mut(&mut self) -> Option<&mut ChildNode> {
+        let tuple = AsNode::cast(self).base().parent.as_ref()?;
+        helpers::get_mut_node_at_index(&tuple.0, tuple.1 + 1)
     }
     /// Returns the value of the current node.
     ///
@@ -546,14 +578,14 @@ pub trait AsNode: AsEventTarget {
     /// - Returns a [`HierarchyRequestError`] DOMException if the constraints of the node tree are violated.
     /// # Example
     /// ```rust
-    /// use dom::{Document, AsNode};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut node = document.create_element("div");
     /// let mut child = document.create_element("span");
     /// node.append_child(&mut child).unwrap();
     ///
-    /// assert_eq!(node.first_child().unwrap(), &child)
+    /// assert_eq!(node.first_child().unwrap(), child)
     ///
     /// ```
     fn append_child<'a, T: AsNode>(&mut self, child: &'a mut T) -> Result<&'a T, DOMException> {
@@ -567,7 +599,7 @@ pub trait AsNode: AsEventTarget {
     /// Event listeners are not cloned.
     /// # Example
     /// ```
-    /// use dom::{Document, AsNode};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let node = document.create_element("div");
@@ -581,7 +613,7 @@ pub trait AsNode: AsEventTarget {
     /// Returns true if other is an inclusive descendant of node, and false otherwise.
     /// # Example
     /// ```
-    /// use dom::{Document, AsNode};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut node1 = document.create_element("div");
@@ -609,7 +641,7 @@ pub trait AsNode: AsEventTarget {
     /// - Returns a [`HierarchyRequestError`] DOMException if the constraints of the node tree are violated.
     /// # Example
     /// ```
-    /// use dom::{Document, AsNode};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut parent = document.create_element("div");
@@ -619,10 +651,10 @@ pub trait AsNode: AsEventTarget {
     /// let mut new_node = document.create_element("div");
     /// parent.insert_before(&mut new_node, Some(&mut reference_child)).unwrap();
     ///
-    /// assert_eq!(parent.first_child().unwrap(), &new_node);
-    /// assert_eq!(parent.last_child().unwrap(), &reference_child);
-    /// assert_eq!(new_node.next_sibling().unwrap(), &reference_child);
-    /// assert_eq!(reference_child.previous_sibling().unwrap(), &new_node);
+    /// assert_eq!(parent.first_child().unwrap(), new_node);
+    /// assert_eq!(parent.last_child().unwrap(), reference_child);
+    /// assert_eq!(new_node.next_sibling().unwrap(), reference_child);
+    /// assert_eq!(reference_child.previous_sibling().unwrap(), new_node);
     /// ```
     fn insert_before<'a, T: AsNode>(
         &mut self,
@@ -645,7 +677,7 @@ pub trait AsNode: AsEventTarget {
     /// MDN Reference: [`Node.isEqualNode()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/isEqualNode)
     /// # Example
     /// ```
-    /// use dom::{Document, AsNode};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let node1 = document.create_element("div");
@@ -663,7 +695,7 @@ pub trait AsNode: AsEventTarget {
     /// MDN Reference: [`Node.isSameNode()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/isSameNode)
     /// # Example
     /// ```
-    /// use dom::{Document, AsNode};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut parent = document.create_element("div");
@@ -698,7 +730,7 @@ pub trait AsNode: AsEventTarget {
     /// Returns an error if the node to remove is not a child of this node.
     /// # Example
     /// ```
-    /// use dom::{Document, AsNode};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut parent = document.create_element("div");
@@ -725,7 +757,7 @@ pub trait AsNode: AsEventTarget {
     /// Returns an error if the node to replace is not a child of this node, or the addtion of the new node violates the constraints of the node tree.
     /// # Example
     /// ```
-    /// use dom::{Document, AsNode};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut parent = document.create_element("div");
@@ -777,232 +809,6 @@ pub trait AsNode: AsEventTarget {
     /// Set when other is a descendant of node.
     const DOCUMENT_POSITION_CONTAINED_BY: u8 = 0x10;
     const DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC: u8 = 0x20;
-}
-
-// PARENT NODE.
-
-#[derive(Debug)]
-pub struct ParentNode {
-    inner: Node,
-}
-impl<T: AsNode> PartialEq<T> for ParentNode {
-    fn eq(&self, other: &T) -> bool {
-        &self.inner == AsNode::cast(other)
-    }
-}
-impl AsEventTarget for ParentNode {
-    #[inline(always)]
-    fn cast(&self) -> &EventTarget {
-        AsEventTarget::cast(&self.inner)
-    }
-    #[inline(always)]
-    fn cast_mut(&mut self) -> &mut EventTarget {
-        AsEventTarget::cast_mut(&mut self.inner)
-    }
-}
-impl AsNode for ParentNode {
-    #[inline(always)]
-    fn cast(&self) -> &Node {
-        &self.inner
-    }
-    #[inline(always)]
-    fn cast_mut(&mut self) -> &mut Node {
-        &mut self.inner
-    }
-    fn clone_node(&self, deep: bool) -> Self {
-        ParentNode {
-            inner: self.inner.clone_node(deep),
-        }
-    }
-}
-impl AsParentNode for ParentNode {}
-
-pub trait AsParentNode: AsNode {
-    /// Returns the number of children of this node that are elements.
-    fn child_element_count(&self) -> usize {
-        AsNode::cast(self)
-            .base
-            .borrow()
-            .children
-            .iter()
-            .filter(|node| node.node_type() == Self::ELEMENT_NODE)
-            .count()
-    }
-    /// Returns the children elements of this node.
-    fn children(&self) -> HTMLCollection {
-        HTMLCollection {
-            items: self.child_nodes().items,
-        }
-    }
-    /// Returns the first child that is an element.
-    fn first_element_child(&self) {
-        todo!()
-    }
-    /// Returns the last child that is an element.
-    fn last_element_child(&self) {
-        todo!()
-    }
-    /// Inserts nodes after the last child of node, while replacing strings in nodes with equivalent Text nodes.
-    /// # Errors
-    /// - Returns a `HierarchyRequestError` DOMException if the constraints of the node tree are violated.
-    /// # Example
-    /// ```
-    /// use dom::{Document, AsParentNode, AsNode};
-    ///
-    /// let document = Document::new();
-    /// let mut element = document.create_element("div");
-    /// let mut child = document.create_element("div");
-    /// element.append(&mut child);
-    ///
-    /// assert_eq!(child.parent_node().unwrap(), element);
-    /// assert_eq!(element.first_child().unwrap(), &child);
-    ///
-    /// ```
-    fn append<'a, T: 'a + AsNode>(
-        &mut self,
-        node: impl Into<&'a mut T>,
-    ) -> Result<(), DOMException> {
-        let node = AsNode::cast_mut(node.into());
-        self.append_child(node)?;
-        // DOM updates are triggered already.|
-        Ok(())
-    }
-    /// Inserts nodes before the first child of node, while replacing strings in nodes with equivalent Text nodes.
-    /// # Errors
-    /// - Returns a `HierarchyRequestError` DOMException if the constraints of the node tree are violated.
-    fn prepend<'a, T: 'a + AsNode>(
-        &mut self,
-        node: impl Into<&'a mut T>,
-    ) -> Result<(), DOMException> {
-        let node = AsNode::cast_mut(node.into());
-        let none: Option<&mut Node> = None;
-        AsNode::cast_mut(self).insert_before(node, none)?;
-        // DOM updates are triggered already.|
-        Ok(())
-    }
-    /// Traverse tree and find the first element that matches a selector, if it exists.
-    fn query_selector<T: AsElement>(&self, selector: &str) -> Option<T> {
-        unimplemented!()
-    }
-    /// Traverse tree and find all the elements that matches a selector.
-    fn query_selector_all<T: AsElement>(&self, selector: &str) -> Option<T> {
-        unimplemented!()
-    }
-    // /// Replace all children of node with nodes, while replacing strings in nodes with equivalent Text nodes.
-    // /// # Errors
-    // /// - Returns a `HierarchyRequestError` DOMException if the constraints of the node tree are violated.
-    fn replace_children(&mut self, nodes: Vec<impl AsNode>) {
-        todo!()
-    }
-}
-
-// CHILD NODE.
-
-#[derive(Debug)]
-pub struct ChildNode {
-    inner: Node,
-}
-impl ChildNode {
-    fn clone_ref(&self) -> Self {
-        ChildNode {
-            inner: self.inner.clone_ref(),
-        }
-    }
-}
-impl<T: AsNode> PartialEq<T> for ChildNode {
-    fn eq(&self, other: &T) -> bool {
-        &self.inner == AsNode::cast(other)
-    }
-}
-impl AsEventTarget for ChildNode {
-    fn cast(&self) -> &EventTarget {
-        AsEventTarget::cast(&self.inner)
-    }
-
-    fn cast_mut(&mut self) -> &mut EventTarget {
-        AsEventTarget::cast_mut(&mut self.inner)
-    }
-}
-impl<T: AsNode> From<&T> for ChildNode {
-    fn from(node: &T) -> Self {
-        ChildNode {
-            inner: Node {
-                base: AsNode::cast(node).base.clone(),
-            },
-        }
-    }
-}
-impl AsNode for ChildNode {
-    fn cast(&self) -> &Node {
-        &self.inner
-    }
-    fn cast_mut(&mut self) -> &mut Node {
-        &mut self.inner
-    }
-    fn clone_node(&self, deep: bool) -> Self {
-        ChildNode {
-            inner: self.inner.clone_node(deep),
-        }
-    }
-}
-impl AsChildNode for ChildNode {}
-
-pub trait AsChildNode: AsNode {
-    /// Inserts nodes just after node, while replacing strings in nodes with equivalent Text nodes.
-    /// # Errors
-    /// - Errors with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
-    fn after<'a, T: 'a + AsNode>(
-        &mut self,
-        node: impl Into<&'a mut T>,
-    ) -> Result<(), DOMException> {
-        let node = AsNode::cast_mut(node.into());
-        if let Some(mut parent) = self.parent_node() {
-            match self.next_sibling() {
-                Some(mut next) => parent.insert_before(node, Some(&mut next))?,
-                None => parent.append_child(node)?,
-            };
-        }
-        // DOM updates are triggered already.
-        Ok(())
-    }
-    /// Inserts nodes just before node, while replacing strings in nodes with equivalent Text nodes.
-    /// # Errors
-    /// - Returns a "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
-    fn before<'a, T: 'a + AsNode>(
-        &mut self,
-        node: impl Into<&'a mut T>,
-    ) -> Result<(), DOMException> {
-        let node = AsNode::cast_mut(node.into());
-        if let Some(mut parent) = self.parent_node() {
-            parent.insert_before(node, Some(self))?;
-        }
-        // DOM updates are triggered already.
-        Ok(())
-    }
-    /// Removes node from its parent. If the node has no parent then nothing happens.
-    /// MDN Reference
-    fn remove(&mut self) {
-        let node = AsNode::cast_mut(self);
-        let former_parent = node.parent_node();
-        node.__remove();
-        if let Some(parent) = former_parent {
-            AsNode::cast(&parent).update_document();
-        }
-    }
-    /// Replaces node with nodes, while replacing strings in nodes with equivalent Text nodes.
-    /// # Errors
-    /// - Panics with "HierarchyRequestError" DOMException if the constraints of the node tree are violated.
-    fn replace_with<'a, T: 'a + AsNode>(
-        &mut self,
-        node: impl Into<&'a mut T>,
-    ) -> Result<(), DOMException> {
-        let node = AsNode::cast_mut(node.into());
-        if let Some(mut parent) = node.parent_node() {
-            parent.replace_child(AsNode::cast_mut(self), node)?;
-        }
-        // DOM updates are triggered already.
-        Ok(())
-    }
 }
 
 mod helpers {
@@ -1063,10 +869,18 @@ mod helpers {
 
     /// Return the child node at a particular index, if it exists.
     pub fn get_node_at_index<'a>(parentref: &WeakNodeRef, index: usize) -> Option<&'a ChildNode> {
-        match parentref.inner.upgrade() {
-            Some(parent_node_ref) => unsafe { &*parent_node_ref.as_ptr() }.children.get(index),
-            None => None,
-        }
+        unsafe { &*(parentref.inner.upgrade()?).as_ptr() }
+            .children
+            .get(index)
+    }
+
+    pub fn get_mut_node_at_index<'a>(
+        parentref: &WeakNodeRef,
+        index: usize,
+    ) -> Option<&'a mut ChildNode> {
+        unsafe { &mut *(parentref.inner.upgrade()?).as_ptr() }
+            .children
+            .get_mut(index)
     }
 
     /// Create a copy of a node still attached to the parent node.
@@ -1132,16 +946,16 @@ mod tests {
         let mut grandchild = document.create_element("p");
         parent.append_child(&mut child).unwrap();
         parent
-            .first_child()
+            .first_child_mut()
             .unwrap()
             .append_child(&mut grandchild)
             .unwrap();
 
-        assert_eq!(parent.first_child().unwrap(), child);
-        assert_eq!(parent.last_child().unwrap(), child);
+        assert_eq!(parent.first_child().unwrap(), &child);
+        assert_eq!(parent.last_child().unwrap(), &child);
         assert_eq!(child.parent_node().as_ref().unwrap(), &parent);
 
-        assert_eq!(child.first_child().unwrap(), grandchild);
+        assert_eq!(child.first_child().unwrap(), &grandchild);
 
         assert!(parent.contains(&grandchild));
 
@@ -1161,10 +975,10 @@ mod tests {
         parent.append_child(&mut child2).unwrap();
         parent.append_child(&mut child3).unwrap();
 
-        assert_eq!(child1.next_sibling().unwrap(), child2);
-        assert_eq!(child2.next_sibling().unwrap(), child3);
-        assert_eq!(child2.previous_sibling().unwrap(), child1);
-        assert_eq!(child3.previous_sibling().unwrap(), child2);
+        assert_eq!(child1.next_sibling().unwrap(), &child2);
+        assert_eq!(child2.next_sibling().unwrap(), &child3);
+        assert_eq!(child2.previous_sibling().unwrap(), &child1);
+        assert_eq!(child3.previous_sibling().unwrap(), &child2);
     }
 
     #[test]

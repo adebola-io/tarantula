@@ -5,6 +5,7 @@ pub enum DOMException {
     InvalidCharacterError(String),
     TypeError(String),
     IllegalConstructor(String),
+    NotFoundError(String),
 }
 
 impl DOMException {
@@ -22,7 +23,8 @@ impl DOMException {
             | DOMException::SyntaxError(message)
             | DOMException::InvalidCharacterError(message)
             | DOMException::TypeError(message)
-            | DOMException::IllegalConstructor(message) => message,
+            | DOMException::IllegalConstructor(message)
+            | DOMException::NotFoundError(message) => message,
         }
     }
 
@@ -33,6 +35,7 @@ impl DOMException {
             DOMException::InvalidCharacterError(_) => "InvalidCharacterError",
             DOMException::TypeError(_) => "TypeError",
             DOMException::IllegalConstructor(message) => "IllegalConstructor",
+            DOMException::NotFoundError(_) => "NotFoundError",
         }
     }
 }

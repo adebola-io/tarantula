@@ -16,6 +16,8 @@ mod misc;
 mod named_node_map;
 mod node;
 mod nodelist;
+mod range;
+mod slot;
 mod tag;
 #[cfg(test)]
 mod test;
@@ -29,7 +31,7 @@ pub use dom_token_list::{DOMTokenList, MutDOMTokenList};
 pub use domexception::*;
 pub use element::{
     AsElement, CheckVisibilityOptions, DOMRect, DOMRectList, Element, FullscreenOptions,
-    InsertPosition, ScrollIntoView, ScrollToOptions, ShadowRoot, ShadowRootInit,
+    InsertPosition, ScrollIntoView, ScrollToOptions,
 };
 pub use event::{AsEvent, DOMHighResTimeStamp, Event};
 pub use event_target::{AsEventTarget, EventTarget};
@@ -42,6 +44,8 @@ pub use node::{
     AsChildNode, AsNode, AsParentNode, ChildNode, GetRootNodeOptions, Node, ParentNode,
 };
 pub use nodelist::{MutNodeListOf, NodeListOf};
+pub use range::Range;
+pub use slot::*;
 pub use window::WindowEventHandlers;
 
 pub type DOMResult = Result<(), DOMException>;

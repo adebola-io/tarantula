@@ -6,11 +6,10 @@ use std::{
 use crate::{
     document::DocumentBase, dom_token_list::ListType, domitem::DOMItem, node::NodeType, tag::Tag,
     AsChildNode, AsDocument, AsEventTarget, AsNode, AsParentNode, Attr, DOMException, DOMTokenList,
-    HTMLCollection, HTMLCollectionOf, InnerHtml, MutDOMTokenList, NamedNodeMap, Node,
+    HTMLCollection, HTMLCollectionOf, InnerHtml, MutDOMTokenList, NamedNodeMap, Node, ShadowRoot,
+    ShadowRootInit,
 };
 
-pub struct ShadowRoot;
-pub struct ShadowRootInit;
 pub struct CheckVisibilityOptions;
 pub struct DOMRect;
 pub struct DOMRectList;
@@ -223,7 +222,7 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// MDN Reference: [`Element.className`](https://developer.mozilla.org/en-US/docs/Web/API/Element/className).
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut element = document.create_element("p");
@@ -243,7 +242,7 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// MDN Reference: [`Element.className`](https://developer.mozilla.org/en-US/docs/Web/API/Element/className).
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut element = document.create_element("p");
@@ -291,7 +290,7 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// MDN Reference: [`Element.id`](https://developer.mozilla.org/en-US/docs/Web/API/Element/id).
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut element = document.create_element("p");
@@ -312,7 +311,7 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     ///
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut element = document.create_element("p");
@@ -440,7 +439,7 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// MDN Reference: [`Element.tagName`](https://developer.mozilla.org/en-US/docs/Web/API/Element/tagName).
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let element = document.create_element("div");
@@ -477,7 +476,7 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     ///
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut element = document.create_element("img");
@@ -522,7 +521,7 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// MDN Reference: [`Element.getAttributeNames()`](https://developer.mozilla.org/en-US/docs/Web/API/Element/getAttributeNames).
     /// # Example
     /// ```
-    /// use dom::{Document, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut a = document.create_element("a");
@@ -580,7 +579,7 @@ pub trait AsElement: AsNode + AsChildNode + AsParentNode + InnerHtml {
     /// MDN Reference: [`Element.getElementsByClassName()`](https://developer.mozilla.org/docs/Web/API/Element/getElementsByClassName)
     /// # Example
     /// ```
-    /// use dom::{Document, AsParentNode, AsChildNode, AsElement};
+    /// use dom::{traits::*, Document};
     ///
     /// let document = Document::new();
     /// let mut div = document.create_element("div");
