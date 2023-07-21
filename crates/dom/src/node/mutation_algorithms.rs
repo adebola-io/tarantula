@@ -340,7 +340,7 @@ pub fn replace<'child, T: AsNode>(
 
     // 3. If child’s parent is not parent, then throw a "NotFoundError" DOMException.
     if !AsNode::cast(child).is_child_of(parent) {
-        return Err(DOMException::HierarchyRequestError(format!(
+        return Err(DOMException::NotFoundError(format!(
             "Child to replace is not a child of Parent"
         )));
     }
