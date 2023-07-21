@@ -69,7 +69,7 @@ pub fn ensure_pre_insertion_validity(
         ));
     }
     // 4. If node is not a DocumentFragment, DocumentType, Element, or CharacterData node, then throw a "HierarchyRequestError" DOMException.
-    if [
+    if ![
         Node::DOCUMENT_FRAGMENT_NODE,
         Node::DOCUMENT_TYPE_NODE,
         Node::ELEMENT_NODE,
